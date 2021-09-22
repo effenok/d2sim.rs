@@ -1,0 +1,11 @@
+[package]
+name = "grappy"
+version = "0.1.0"
+authors = ["effie"]
+edition = "2018"
+
+[dependencies]
+rand = "0.8.4"
+
+#[features]
+#stdout = []
