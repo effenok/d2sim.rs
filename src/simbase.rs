@@ -1,21 +1,22 @@
 use crate::scheduler::{EventType, RoundScheduler};
 use crate::component::{Component, ComponentBuilder};
-use crate::channel::Channel;
+use crate::channel::synch::Channel;
 use crate::environment::Environment;
 use crate::keys::{ComponentId, ChannelId};
 use std::collections::HashMap;
+use crate::channel::ChannelTrait;
 
 static ID_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
 fn generate_next_id() -> usize {
     ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
 }
 
-pub type ComponentsMap = HashMap<usize, Box<dyn Component>>;
+pub type Components = Vec<Box<dyn Component>>;
 type ChannelMap  = HashMap<usize, Box<Channel>>;
 
 pub struct Simulation {
-    components: ComponentsMap,
-    channels: ChannelMap,
+    components: Components,
+    channels: Vec<Channel>,
     scheduler: RoundScheduler,
     env: Environment,
     // sim_keys: SimKeys,
@@ -24,8 +25,8 @@ pub struct Simulation {
 impl Default for Simulation {
     fn default() -> Self {
         Self {
-            components: HashMap::new(),
-            channels: HashMap::new(),
+            components: Vec::new(),
+            channels: Vec::new(),
             scheduler: RoundScheduler::new(),
             env: Environment::default(),
             // sim_keys: SimKeys::default()
@@ -35,28 +36,27 @@ impl Default for Simulation {
 
 impl Simulation {
 
-    pub fn add_process(&mut self,  builder: &mut dyn ComponentBuilder) -> ComponentId {
-        let id = generate_next_id();
+    pub fn add_component(&mut self, builder: &mut dyn ComponentBuilder) -> ComponentId {
+        let id = self.components.len();
+        let id = ComponentId::new(id);
 
-        self.components.insert(id,
-                               builder.build_component(id.clone(), &mut self.env)
-        );
+        self.components.push(builder.build_component(id, &mut self.env));
         id
     }
 
     pub fn add_channel(&mut self, p0: ComponentId, p1: ComponentId) -> ChannelId {
-        let channel_id = generate_next_id();
-        self.channels.insert(channel_id, Box::new(Channel::new(channel_id, p0, p1)));
-        let  p0 = self.components.get_mut(&p0).unwrap();
+        let channel_id = self.channels.len();
+        self.channels.push(Channel::new(channel_id, p0, p1));
+        let  p0 = &mut self.components[p0.as_idx()];
         p0.add_channel(channel_id);
-        let p1 = self.components.get_mut(&p1).unwrap();
+        let p1 = &mut self.components[p1.as_idx()];
         p1.add_channel(channel_id);
         channel_id
     }
 
     pub fn call_init(&mut self) {
         println!("\nInitializing simulation: #components {}", self.components.len());
-        for p in self.components.values_mut() {
+        for p in self.components.iter_mut() {
             // debug(p);
             p.init(&mut self.scheduler, &mut self.env);
         }
@@ -85,17 +85,17 @@ impl Simulation {
 
         match event.event {
             EventType::ProcessEvent(ev_data) => {
-                let component = self.components.get_mut(&ev_data.receiver).unwrap();
+                let component = &mut self.components[ev_data.receiver.as_idx()];
                 component.process_event(ev_data.sender, ev_data.event, &mut self.scheduler, &mut self.env);
             },
             EventType::MsgSendEvent(ev_data) => {
-                let channel = self.channels.get_mut(&ev_data.channel).unwrap();
-                channel.message_from(ev_data.sender, ev_data.message, &mut self.scheduler);
+                let channel = &mut self.channels[ev_data.channel];
+                channel.accept_message_from(ev_data.sender, ev_data.message, &mut self.scheduler);
             },
             EventType::MsgRcvEvent(ev_data) => {
                 // println!("event at time: {}", self.scheduler.curr_time);
-                let process = self.components.get_mut(&ev_data.receiver).unwrap();
-                process.receive_msg(ev_data.channel, ev_data.message, &mut self.scheduler, &mut self.env);
+                let component = &mut self.components[ev_data.receiver.as_idx()];
+                component.receive_msg(ev_data.channel, ev_data.message, &mut self.scheduler, &mut self.env);
             }
         }
 
@@ -109,9 +109,9 @@ impl Simulation {
     }
 
     // TODO: validate accepts immutable iterator for map
-    pub fn call_terminate(&mut self, validate: fn(&ComponentsMap) -> bool) {
+    pub fn call_terminate(&mut self, validate: fn(&Components) -> bool) {
         println!("\nSimulation completed in {} time units", self.scheduler.curr_time);
-        for p in self.components.values_mut() {
+        for p in self.components.iter_mut() {
             // debug(p);
             p.terminate(&mut self.env);
         }

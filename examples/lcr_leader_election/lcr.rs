@@ -58,15 +58,15 @@ impl Component for Process {
         assert_eq!(self.base.channels.len(), 2);
 
         //FIXME: first process on the ring gets its channels in opposite order
-        let pid = self.base.component_id;
-        if pid == 1 {
+        let pid = self.id();
+        if pid.as_idx() == 0 {
             let right = self.base.channels[0];
             self.base.channels[0] = self.base.channels[1];
             self.base.channels[1] = right;
         }
 
         println!{"initialized process {:?}", self}
-        scheduler.sched_self_event(NO_DELTA, pid);
+        scheduler.sched_self_event(NO_DELTA, self.id());
     }
 
     fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut RoundScheduler, _env: &mut Environment) {

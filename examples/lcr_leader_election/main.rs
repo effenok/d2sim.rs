@@ -1,10 +1,10 @@
 mod lcr;
 use crate::lcr::{ProcessBuilder};
 
-use grappy::sim::{Simulation, ComponentsMap};
+use grappy::simbase::{Simulation, Components};
 use grappy::keys::ComponentId;
 
-fn validate<'a>(components: &ComponentsMap) -> bool {
+fn validate<'a>(components: &Components) -> bool {
 	// checking that there is a leader
 	// there is a unique leader
 	// leader is largest id
@@ -12,7 +12,7 @@ fn validate<'a>(components: &ComponentsMap) -> bool {
 	// let mut leader_var_in_followers: usize = 0;
 	// let mut max_uid : usize = 0;
 
-	for _c in components.values() {
+	for _c in components.iter() {
 		return true;
 
 		// // TODO:
@@ -76,12 +76,12 @@ fn main() {
 	let mut process_builder = ProcessBuilder::new(100);
 
 	const NUM_NODES: usize = 10;
-    let mut nodes: [ComponentId; 10] = [0; 10];
+    let mut nodes: Vec<ComponentId> = Vec::with_capacity(10);
 
     // create nodes
     for n in 0..NUM_NODES {
-		let node = simulation.add_process(&mut process_builder);
-		nodes[n] = node;
+		let node = simulation.add_component(&mut process_builder);
+		nodes.push(node);
 		// println!("created node {:?}", nodes[n]);
 	}
 
