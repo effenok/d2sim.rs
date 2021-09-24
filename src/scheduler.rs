@@ -2,6 +2,8 @@ use crate::keys::{ComponentId, ChannelId};
 use std::collections::BinaryHeap;
 use std::any::Any;
 use std::cmp::Ordering;
+use std::cmp::PartialEq;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct ProcessEvent {
@@ -17,7 +19,6 @@ pub struct MessageSendEvent {
     pub message: Box<dyn Any>,
 }
 
-
 #[derive(Debug)]
 pub struct MessageRcvEvent {
     pub channel:ChannelId,
@@ -29,17 +30,69 @@ pub struct MessageRcvEvent {
 pub enum EventType {
     ProcessEvent(ProcessEvent),
     MsgSendEvent(MessageSendEvent),
-    MsgRcvEvent(MessageRcvEvent)
+    MsgRcvEvent(MessageRcvEvent),
+    EndSimulation,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct SimTimeDelta {
+    delta: Duration
+}
+
+impl SimTimeDelta {
+    pub(crate) fn from_duration(delta: Duration) -> Self {
+        SimTimeDelta {delta}
+    }
+}
+
+pub const NO_DELTA: SimTimeDelta = SimTimeDelta { delta: Duration::from_secs(0) };
+pub const ROUND_DELTA: SimTimeDelta = SimTimeDelta { delta: Duration::from_secs(1) };
+
+#[derive(Default, Debug, Ord, PartialOrd, PartialEq, Eq, Copy, Clone)]
+pub struct SimTime {
+    time: Duration,
+}
+
+impl std::ops::Add<SimTimeDelta> for SimTime {
+    type Output = SimTime;
+
+    fn add(self, _rhs: SimTimeDelta) -> SimTime {
+        SimTime { time: self.time + _rhs.delta }
+    }
+}
+
+impl SimTime {
+    fn advance_to (&mut self, new_time: SimTime) {
+        assert!(self.time <= new_time.time, "time mismatch: {:?} {:?}", self, new_time);
+        self.time = new_time.time;
+    }
+
+    fn is_zero(&self) -> bool {
+        return self.time.as_secs() == 0 && self.time.as_nanos() == 0;
+    }
+
+    pub fn as_rounds(&self) -> u64 {
+        return self.time.as_secs();
+    }
+
+    // TODO: implement meaningful display for sim_time;
+
+    pub fn as_millis(&self) -> u128 {
+        return self.time.as_millis()
+    }
+}
+
+
 #[derive(Debug)]
-pub struct ScheduledEvent {
-    pub time: usize,
+struct ScheduledEvent
+{
+    pub time: SimTime,
     pub event: EventType,
 }
 
 impl Ord for ScheduledEvent {
-    fn cmp(&self, other: &Self) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering
+    {
         self.time.cmp(&other.time).reverse()
     }
 }
@@ -58,46 +111,54 @@ impl PartialEq for ScheduledEvent {
 
 impl Eq for ScheduledEvent {}
 
-// impl Debug for Event {
-// 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-// 		write!(f, "Event {{ time: {:?}, sender: {:?}, channel: {:?}, receiver: {:?}, message: {:p} }}"
-// 			   , self.time, self.sender, self.channel, self.receiver, self.message)
-// 	}
-// }
 
-pub const NO_DELTA: usize = 0;
-pub const ROUND_DELTA: usize = 1;
 
-pub struct RoundScheduler {
-    pub events: BinaryHeap<ScheduledEvent>,
-    pub curr_time: usize,
+pub struct Scheduler
+{
+    events: BinaryHeap<ScheduledEvent>,
+    pub curr_time: SimTime,
 }
 
-impl RoundScheduler {
+impl Scheduler
+{
     pub fn new() -> Self {
-        RoundScheduler { events: BinaryHeap::default(), curr_time: 0}
+        Scheduler { events: BinaryHeap::default(), curr_time: SimTime::default()}
     }
 
-    pub fn sched_send_msg(&mut self, timedelta: usize, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
+    pub fn next_event(&mut self) -> EventType {
+        // eprintln!("self.scheduler.events = {:?}", self.scheduler.events);
+        let event = self.events.pop();
+
+        if event.is_none() {
+            return EventType::EndSimulation;
+        }
+
+        let event = event.unwrap();
+
+        // updaate time
+        self.curr_time.advance_to (event.time);
+
+        return event.event;
+    }
+
+    pub fn sched_send_msg(&mut self, timedelta: SimTimeDelta, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
         let time = self.curr_time + timedelta;
         let event = ScheduledEvent { time, event: EventType::MsgSendEvent(
             MessageSendEvent { sender, channel, message }
         )};
-        // eprintln!("\t\t\tcreated event = {:?}", event);
         self.events.push(event);
     }
 
-    pub fn sched_receive_msg(&mut self, timedelta: usize, receiver: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
+    pub fn sched_receive_msg(&mut self, timedelta: SimTimeDelta, receiver: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
         let time = self.curr_time + timedelta;
         let event = ScheduledEvent { time, event: EventType::MsgRcvEvent(
             MessageRcvEvent {channel, receiver, message}
         )};
-        // eprintln!("\t\t\tcreated event = {:?}", event);
         self.events.push(event);
     }
 
-    pub fn sched_self_event(&mut self, timedelta: usize, process: ComponentId) {
-        assert_eq!(self.curr_time, 0);
+    pub fn sched_self_event(&mut self, timedelta: SimTimeDelta, process: ComponentId) {
+        assert!(self.curr_time.is_zero());
 
         let time = self.curr_time + timedelta;
         let event = ScheduledEvent { time, event: EventType::ProcessEvent(

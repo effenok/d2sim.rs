@@ -1,40 +1,36 @@
-use crate::scheduler::{EventType, RoundScheduler};
+use crate::scheduler::{EventType, Scheduler};
 use crate::component::{Component, ComponentBuilder};
-use crate::channel::synch::Channel;
 use crate::environment::Environment;
 use crate::keys::{ComponentId, ChannelId};
-use std::collections::HashMap;
-use crate::channel::ChannelTrait;
 
-static ID_COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
-fn generate_next_id() -> usize {
-    ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-}
+use crate::channel::ChannelTrait;
+use crate::channel::ChannelBuilder;
 
 pub type Components = Vec<Box<dyn Component>>;
-type ChannelMap  = HashMap<usize, Box<Channel>>;
 
-pub struct Simulation {
+pub struct Simulation<CB>
+    where CB : ChannelBuilder
+{
     components: Components,
-    channels: Vec<Channel>,
-    scheduler: RoundScheduler,
+    channels: Vec<CB::C>,
+    scheduler: Scheduler,
     env: Environment,
     // sim_keys: SimKeys,
 }
 
-impl Default for Simulation {
+impl<CB: ChannelBuilder> Default for Simulation<CB> {
     fn default() -> Self {
         Self {
             components: Vec::new(),
             channels: Vec::new(),
-            scheduler: RoundScheduler::new(),
+            scheduler: Scheduler::new(),
             env: Environment::default(),
             // sim_keys: SimKeys::default()
         }
     }
 }
 
-impl Simulation {
+impl<CB: ChannelBuilder> Simulation<CB> {
 
     pub fn add_component(&mut self, builder: &mut dyn ComponentBuilder) -> ComponentId {
         let id = self.components.len();
@@ -44,9 +40,9 @@ impl Simulation {
         id
     }
 
-    pub fn add_channel(&mut self, p0: ComponentId, p1: ComponentId) -> ChannelId {
+    pub fn add_channel(&mut self, builder: &mut CB, p0: ComponentId, p1: ComponentId) -> ChannelId {
         let channel_id = self.channels.len();
-        self.channels.push(Channel::new(channel_id, p0, p1));
+        self.channels.push(builder.build_channel(channel_id, p0, p1));
         let  p0 = &mut self.components[p0.as_idx()];
         p0.add_channel(channel_id);
         let p1 = &mut self.components[p1.as_idx()];
@@ -63,27 +59,10 @@ impl Simulation {
     }
 
     pub fn step(&mut self) -> bool {
-        // eprintln!("self.scheduler.events = {:?}", self.scheduler.events);
-        let event = self.scheduler.events.pop();
 
-        if event.is_none() {
-            return false;
-        }
+        let event = self.scheduler.next_event();
 
-        let event = event.unwrap();
-
-        // updaate time
-        if self.scheduler.curr_time > event.time {
-            eprintln!("processing event = {:?}", event);
-            eprintln!("self.scheduler.events = {:?}", self.scheduler.events);
-            assert!(self.scheduler.curr_time <= event.time, "time mismatch: {} {}", self.scheduler.curr_time, event.time);
-        }
-
-        if self.scheduler.curr_time < event.time {
-            self.scheduler.curr_time = event.time;
-        }
-
-        match event.event {
+        match event {
             EventType::ProcessEvent(ev_data) => {
                 let component = &mut self.components[ev_data.receiver.as_idx()];
                 component.process_event(ev_data.sender, ev_data.event, &mut self.scheduler, &mut self.env);
@@ -97,6 +76,7 @@ impl Simulation {
                 let component = &mut self.components[ev_data.receiver.as_idx()];
                 component.receive_msg(ev_data.channel, ev_data.message, &mut self.scheduler, &mut self.env);
             }
+            EventType::EndSimulation => {return false;}
         }
 
         true
@@ -109,13 +89,16 @@ impl Simulation {
     }
 
     // TODO: validate accepts immutable iterator for map
-    pub fn call_terminate(&mut self, validate: fn(&Components) -> bool) {
-        println!("\nSimulation completed in {} time units", self.scheduler.curr_time);
+    pub fn call_terminate(&mut self) {
+        println!("\nSimulation completed in {:?} time units", self.scheduler.curr_time);
         for p in self.components.iter_mut() {
             // debug(p);
             p.terminate(&mut self.env);
         }
+    }
 
-        assert!(validate(&self.components));
+    // TODO:
+    pub fn validate(&self, validate: fn(&[Box<dyn Component>]) -> bool) {
+        assert!(validate(&self.components.iter().as_slice()));
     }
 }

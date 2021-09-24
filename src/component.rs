@@ -1,6 +1,6 @@
 use crate::environment::Environment;
 use crate::keys::{ComponentId, ChannelId};
-use crate::scheduler::RoundScheduler;
+use crate::scheduler::Scheduler;
 use std::any::Any;
 
 #[derive(Debug)]
@@ -30,19 +30,19 @@ pub trait Component {
         self.get_sim_base().add_channel(channel_id);
     }
 
-    fn init(&mut self, scheduler: &mut RoundScheduler, env: &mut Environment );
+    fn init(&mut self, scheduler: &mut Scheduler, env: &mut Environment );
 
     fn process_event(&mut self,
                      sender: ComponentId,
                      event: Box::<dyn Any>,
-                     scheduler: &mut RoundScheduler,
+                     scheduler: &mut Scheduler,
                      env: &mut Environment
     );
 
     fn receive_msg(&mut self,
                    incoming_channel: ChannelId,
                    msg: Box<dyn Any>,
-                   scheduler: &mut RoundScheduler,
+                   scheduler: &mut Scheduler,
                    env: &mut Environment
     );
 

@@ -8,8 +8,12 @@ edition = "2018"
 rand = "0.8.4"
 
 [[example]]
-name = "lcr"
-path = "examples/lcr_leader_election/main.rs"
+name = "synch_lcr"
+path = "examples/synch/lcr_leader_election/main.rs"
+
+[[example]]
+name = "asynch_lcr"
+path = "examples/asyncnetwork/lcr_leader_election/main.rs"
 
 #[[bin]]
 #name = "lcr"

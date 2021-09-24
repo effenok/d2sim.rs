@@ -1,10 +1,14 @@
-mod lcr;
+use grappy::channel::synch::SynchChannelBuilder;
+use grappy::component::Component;
+use grappy::keys::ComponentId;
+use grappy::simbase::{Simulation};
+// use std::any::Any;
+
 use crate::lcr::{ProcessBuilder};
 
-use grappy::simbase::{Simulation, Components};
-use grappy::keys::ComponentId;
+mod lcr;
 
-fn validate<'a>(components: &Components) -> bool {
+fn validate<'a>(components: &[Box<dyn Component>]) -> bool {
 	// checking that there is a leader
 	// there is a unique leader
 	// leader is largest id
@@ -12,15 +16,11 @@ fn validate<'a>(components: &Components) -> bool {
 	// let mut leader_var_in_followers: usize = 0;
 	// let mut max_uid : usize = 0;
 
-	for _c in components.iter() {
-		return true;
+	for _c in components{
+		// eprintln!("c.type_id() = {:?}", (*c).type_id());
 
-		// // TODO:
-		//
-		// eprintln!("c.type_id() = {:?}", c.type_id());
-		//
-		// // let process = c.downcast_ref::<Process>().unwrap();
-		//
+		// let process = (*c).downcast::<Process>();
+
 		//
 		// // eprintln!("iterval = {:?}", process);
 		// max_uid = cmp::max(max_uid, process.uid.0);
@@ -76,23 +76,26 @@ fn main() {
 	let mut process_builder = ProcessBuilder::new(100);
 
 	const NUM_NODES: usize = 10;
-    let mut nodes: Vec<ComponentId> = Vec::with_capacity(10);
+    let mut nodes: Vec<ComponentId> = Vec::with_capacity(NUM_NODES);
 
     // create nodes
-    for n in 0..NUM_NODES {
+    for _ in 0..NUM_NODES {
 		let node = simulation.add_component(&mut process_builder);
 		nodes.push(node);
 		// println!("created node {:?}", nodes[n]);
 	}
 
 	// connect nodes by channels in a ring
+
+	let mut channel_builder = SynchChannelBuilder {};
+
 	for idx0 in 0..NUM_NODES {
 		let idx1  = (idx0 + 1) % NUM_NODES;
 
 		let p0 = nodes[idx0];
 		let p1 = nodes[idx1];
 
-		simulation.add_channel(p0, p1);
+		simulation.add_channel(&mut channel_builder, p0, p1);
 		// println!("created channel {:?} between processes {:?} and {:?}", c, p0, p1);
 	}
 
@@ -101,5 +104,8 @@ fn main() {
 	// simulation.start();
 	simulation.run();
 
-	simulation.call_terminate(validate);
+	simulation.call_terminate();
+
+	// TODO:
+	// simulation.validate(validate);
 }

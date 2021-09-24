@@ -6,7 +6,7 @@ use grappy::uid::UIdGenRandom;
 use grappy::uid::UniqueId;
 use grappy::component::{ComponentBuilder, Component, ComponentBase};
 use grappy::keys::{ComponentId, ChannelId};
-use grappy::scheduler::{RoundScheduler, NO_DELTA};
+use grappy::scheduler::{Scheduler, NO_DELTA};
 
 // process builder -------------------
 pub struct ProcessBuilder {
@@ -53,7 +53,7 @@ impl Component for Process {
         return &mut self.base;
     }
 
-    fn init(&mut self, scheduler: &mut RoundScheduler, _env: &mut Environment) {
+    fn init(&mut self, scheduler: &mut Scheduler, _env: &mut Environment) {
         // assert correct variables
         assert_eq!(self.base.channels.len(), 2);
 
@@ -69,8 +69,8 @@ impl Component for Process {
         scheduler.sched_self_event(NO_DELTA, self.id());
     }
 
-    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut RoundScheduler, _env: &mut Environment) {
-        println!{"[round {}] starting process {:?}", scheduler.curr_time, self}
+    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut Scheduler, _env: &mut Environment) {
+        println!{"[round {}] starting process {:?}", scheduler.curr_time.as_rounds(), self}
         // this is call to start function
         assert_eq!(self.id(), sender);
         if let Some((channel, msg)) = self.round0() {
@@ -81,12 +81,12 @@ impl Component for Process {
     fn receive_msg(&mut self,
                    incoming_channel: ChannelId,
                    msg: Box<dyn Any>,
-                   scheduler: &mut RoundScheduler,
+                   scheduler: &mut Scheduler,
                    _env: &mut Environment
     ) {
         let msg = msg.downcast::<Message>().unwrap();
         println!{"[round {}] process {:?} received msg {:?} on channel {:?}",
-                 scheduler.curr_time, self, msg, incoming_channel}
+                 scheduler.curr_time.as_rounds(), self, msg, incoming_channel}
         if let Some((channel, msg))  = self.round(incoming_channel, msg) {
             scheduler.sched_send_msg(NO_DELTA, self.id(), channel, msg);
         }
