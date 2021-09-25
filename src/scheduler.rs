@@ -86,8 +86,8 @@ impl SimTime {
 #[derive(Debug)]
 struct ScheduledEvent
 {
-    pub time: SimTime,
-    pub event: EventType,
+    time: SimTime,
+    event: EventType,
 }
 
 impl Ord for ScheduledEvent {
@@ -111,22 +111,29 @@ impl PartialEq for ScheduledEvent {
 
 impl Eq for ScheduledEvent {}
 
-
+pub enum SimStatus {
+    Ok,  Failure
+}
 
 pub struct Scheduler
 {
     events: BinaryHeap<ScheduledEvent>,
     pub curr_time: SimTime,
+    sim_status: SimStatus,
 }
 
 impl Scheduler
 {
     pub fn new() -> Self {
-        Scheduler { events: BinaryHeap::default(), curr_time: SimTime::default()}
+        Scheduler { events: BinaryHeap::default(), curr_time: SimTime::default(), sim_result: SimStatus::Ok}
     }
 
     pub fn next_event(&mut self) -> EventType {
-        // eprintln!("self.scheduler.events = {:?}", self.scheduler.events);
+
+        if let SimStatus::Failure = sim_result {
+            return EventType::EndSimulation;
+        }
+
         let event = self.events.pop();
 
         if event.is_none() {
@@ -170,5 +177,9 @@ impl Scheduler
         )};
         // eprintln!("\t\t\tcreated event = {:?}", event);
         self.events.push(event);
+    }
+
+    pub fn sim_error(&mut self) {
+        self.sim_status = SimStatus::Failure;
     }
 }
