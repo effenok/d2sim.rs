@@ -2,8 +2,8 @@ use std::fmt::Debug;
 use std::any::Any;
 
 use grappy::environment::Environment;
-use grappy::uid::UIdGenRandom;
-use grappy::uid::UniqueId;
+use grappy::util::uid::UIdGenRandom;
+use grappy::util::uid::UniqueId;
 use grappy::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
 use grappy::keys::{ComponentId, ChannelId};
 use grappy::scheduler::{Scheduler, NO_DELTA};

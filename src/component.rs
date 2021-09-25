@@ -22,7 +22,7 @@ impl ComponentBase {
         }
     }
 
-    pub fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
+    pub fn add_channel(&mut self, channel_id: ChannelId, _label: ChannelLabel) {
         self.channels.push(channel_id);
     }
 }
