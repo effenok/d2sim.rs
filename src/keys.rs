@@ -1,8 +1,53 @@
 use crate::component::Component;
 use std::marker::PhantomData;
+use crate::channel::ChannelTrait;
 
-// pub type ComponentId = usize;
-pub type ChannelId = usize;
+// ChannelId ---------------------------------------------------
+
+#[derive(PartialEq, Eq, Copy, Clone)]
+pub struct ChannelId {
+    id: usize,
+    _marker: PhantomData<dyn ChannelTrait>
+}
+
+impl Default for ChannelId {
+    fn default() -> Self {
+        ChannelId {
+            id: std::usize::MAX,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl ChannelId {
+    pub fn as_idx(&self) -> usize {
+        self.id
+    }
+
+    // TODO: FROM index
+    pub fn new(id: usize) -> Self {
+        ChannelId {
+            id,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn is_initialized (&self) -> bool {
+        self.id != std::usize::MAX
+    }
+}
+
+impl std::fmt::Debug for ChannelId {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if self.id != std::usize::MAX {
+            write!(f, "({})", self.id)
+        } else {
+            write!(f, "(uninitialized)")
+        }
+    }
+}
+
+// ComponentId ---------------------------------------------------
 
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub struct ComponentId {
@@ -15,7 +60,7 @@ impl ComponentId {
         self.id
     }
 
-    // TODO: from index
+    // TODO: FROM index
     pub fn new(id: usize) -> Self {
         ComponentId {
             id,
@@ -23,6 +68,7 @@ impl ComponentId {
         }
     }
 }
+
 impl std::fmt::Debug for ComponentId {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "({})", self.id)

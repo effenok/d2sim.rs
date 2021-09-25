@@ -4,7 +4,7 @@ use std::any::Any;
 use grappy::environment::Environment;
 use grappy::uid::UIdGenRandom;
 use grappy::uid::UniqueId;
-use grappy::component::{ComponentBuilder, Component, ComponentBase};
+use grappy::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
 use grappy::keys::{ComponentId, ChannelId};
 use grappy::scheduler::{Scheduler, NO_DELTA};
 
@@ -23,9 +23,11 @@ impl ComponentBuilder for ProcessBuilder {
 
     fn build_component(&mut self, pid: ComponentId, _env: &mut Environment) -> Box<dyn Component> {
         Box::new( Process {
-            base: ComponentBase::new(pid),
+            component_id: pid,
+            left: ChannelId::default(),
+            right: ChannelId::default(),
             uid: self.uid_gen.generate_uid(),
-            state: ProcessState::Unknown
+            state: ProcessState::Unknown,
         })
     }
 }
@@ -41,8 +43,9 @@ pub enum ProcessState {
 
 #[derive(Debug)]
 pub struct Process {
-    //TODO: make private
-    pub(crate) base: ComponentBase,
+    pub component_id: ComponentId,
+    pub left: ChannelId,
+    pub right: ChannelId,
     //--------
     pub uid: UniqueId,
     pub state: ProcessState,
@@ -50,20 +53,20 @@ pub struct Process {
 
 impl Component for Process {
     fn get_sim_base(&mut self) -> &mut ComponentBase {
-        return &mut self.base;
+        panic!("Process does not use ComponentBase");
+    }
+
+    fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
+        match label {
+            ChannelLabel::Left => {self.left =  channel_id}
+            ChannelLabel::Right => {self.right = channel_id}
+        }
     }
 
     fn init(&mut self, scheduler: &mut Scheduler, _env: &mut Environment) {
         // assert correct variables
-        assert_eq!(self.base.channels.len(), 2);
-
-        //FIXME: first process on the ring gets its channels in opposite order
-        let pid = self.id();
-        if pid.as_idx() == 0 {
-            let right = self.base.channels[0];
-            self.base.channels[0] = self.base.channels[1];
-            self.base.channels[1] = right;
-        }
+        assert!(self.left.is_initialized());
+        assert!(self.right.is_initialized());
 
         println!{"initialized process {:?}", self}
         scheduler.sched_self_event(NO_DELTA, self.id());
@@ -164,13 +167,11 @@ impl Process {
         }
     }
 
-    fn id(&self) -> ComponentId { self.base.component_id}
+    fn id(&self) -> ComponentId { self.component_id}
 
-    fn left(&self) -> ChannelId {
-        self.base.channels[0]
-    }
+    fn left(&self) -> ChannelId { self.left }
 
-    fn right(&self) -> ChannelId { self.base.channels[1] }
+    fn right(&self) -> ChannelId { self.right}
 }
 
 // end process  -------------------

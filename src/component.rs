@@ -3,6 +3,11 @@ use crate::keys::{ComponentId, ChannelId};
 use crate::scheduler::Scheduler;
 use std::any::Any;
 
+
+pub enum ChannelLabel {
+    Left, Right
+}
+
 #[derive(Debug)]
 pub struct ComponentBase {
     pub component_id: ComponentId,
@@ -17,17 +22,19 @@ impl ComponentBase {
         }
     }
 
-    pub fn add_channel(&mut self, channel_id: ChannelId) {
+    pub fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
         self.channels.push(channel_id);
     }
 }
 
 pub trait Component {
 
-    fn get_sim_base(&mut self) -> &mut ComponentBase;
+    fn get_sim_base(&mut self) -> &mut ComponentBase {
+        todo!("implement me or implement add_channel() function")
+    }
 
-    fn add_channel(&mut self, channel_id: ChannelId) {
-        self.get_sim_base().add_channel(channel_id);
+    fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
+        self.get_sim_base().add_channel(channel_id, label);
     }
 
     fn init(&mut self, scheduler: &mut Scheduler, env: &mut Environment );

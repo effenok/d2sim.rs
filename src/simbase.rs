@@ -1,5 +1,5 @@
 use crate::scheduler::{EventType, Scheduler};
-use crate::component::{Component, ComponentBuilder};
+use crate::component::{Component, ComponentBuilder, ChannelLabel};
 use crate::environment::Environment;
 use crate::keys::{ComponentId, ChannelId};
 
@@ -40,13 +40,14 @@ impl<CB: ChannelBuilder> Simulation<CB> {
         id
     }
 
-    pub fn add_channel(&mut self, builder: &mut CB, p0: ComponentId, p1: ComponentId) -> ChannelId {
+    pub fn add_channel(&mut self, builder: &mut CB, left: ComponentId, right: ComponentId) -> ChannelId {
         let channel_id = self.channels.len();
-        self.channels.push(builder.build_channel(channel_id, p0, p1));
-        let  p0 = &mut self.components[p0.as_idx()];
-        p0.add_channel(channel_id);
-        let p1 = &mut self.components[p1.as_idx()];
-        p1.add_channel(channel_id);
+        let channel_id = ChannelId::new(channel_id);
+        self.channels.push(builder.build_channel(channel_id, left, right));
+        let p_left = &mut self.components[left.as_idx()];
+        p_left.add_channel(channel_id, ChannelLabel::Left);
+        let p_right = &mut self.components[right.as_idx()];
+        p_right.add_channel(channel_id, ChannelLabel::Right);
         channel_id
     }
 
@@ -68,7 +69,7 @@ impl<CB: ChannelBuilder> Simulation<CB> {
                 component.process_event(ev_data.sender, ev_data.event, &mut self.scheduler, &mut self.env);
             },
             EventType::MsgSendEvent(ev_data) => {
-                let channel = &mut self.channels[ev_data.channel];
+                let channel = &mut self.channels[ev_data.channel.as_idx()];
                 channel.accept_message_from(ev_data.sender, ev_data.message, &mut self.scheduler);
             },
             EventType::MsgRcvEvent(ev_data) => {
