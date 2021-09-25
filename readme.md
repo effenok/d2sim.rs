@@ -1,13 +1,10 @@
-# Grappy
+# d2sim.rs
 
-name is gonna change.
+'double-d' sim or Discrete event SIMulator for Distributed systems in RuSt.
 
-currently, this is my learning Rust repo
+currently, in development
 
-### goal
+### Goal
 
-I am trying to implement a simulator for distributed algorithms on graphs (a la OmNet++, only the core part).
-
-### status
-
-As of now the simulator can run LCR Algorithm for leader election on rings. 
+Goal of this project is to develop an event driven simulator 
+for distributed algorithms on graphs (similar to the OmNet++ simulator, only the core part)
