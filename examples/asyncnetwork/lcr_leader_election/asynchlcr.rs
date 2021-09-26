@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 use std::any::Any;
 
-use grappy::environment::Environment;
-use grappy::util::uid::UIdGenRandom;
-use grappy::util::uid::UniqueId;
-use grappy::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
-use grappy::keys::{ComponentId, ChannelId};
-use grappy::scheduler::{Scheduler, NO_DELTA};
+use d2simrs::environment::Environment;
+use d2simrs::util::uid::UIdGenRandom;
+use d2simrs::util::uid::UniqueId;
+use d2simrs::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
+use d2simrs::keys::{ComponentId, ChannelId};
+use d2simrs::scheduler::{Scheduler, NO_DELTA};
 
 // process builder -------------------
 pub struct ProcessBuilder {
@@ -53,7 +53,7 @@ pub struct Process {
 
 impl Component for Process {
 
-    fn get_sim_base(&mut self) -> &mut ComponentBase {
+    fn get_sim_base_mut(&mut self) -> &mut ComponentBase {
         panic!("Process does not use ComponentBase");
     }
 
@@ -64,7 +64,7 @@ impl Component for Process {
         }
     }
 
-    fn init(&mut self, scheduler: &mut Scheduler, _env: &mut Environment) {
+    fn init(&mut self, scheduler: &mut Scheduler) {
         // assert correct variables
         assert!(self.left.is_initialized());
         assert!(self.right.is_initialized());
@@ -73,26 +73,25 @@ impl Component for Process {
         scheduler.sched_self_event(NO_DELTA, self.id());
     }
 
-    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut Scheduler, _env: &mut Environment) {
-        println!{"[time {}ms] starting process {:?}", scheduler.curr_time.as_millis(), self}
+    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut Scheduler) {
+        println!{"[time {}ms] starting process {:?}", scheduler.get_curr_time().as_millis(), self}
         // this is call to start function
         assert_eq!(self.id(), sender);
         if let Some((channel, msg)) = self.round0() {
-            scheduler.sched_send_msg(NO_DELTA, self.id(), channel, msg);
+            scheduler.send_msg(self.id(), channel, msg);
         }
     }
 
     fn receive_msg(&mut self,
                    incoming_channel: ChannelId,
                    msg: Box<dyn Any>,
-                   scheduler: &mut Scheduler,
-                   _env: &mut Environment
+                   scheduler: &mut Scheduler
     ) {
         let msg = msg.downcast::<Message>().unwrap();
         println!{"[time {}ms] process {:?} received msg {:?} on channel {:?}",
-                 scheduler.curr_time.as_millis(), self, msg, incoming_channel}
+                 scheduler.get_curr_time().as_millis(), self, msg, incoming_channel}
         if let Some((channel, msg))  = self.round(incoming_channel, msg) {
-            scheduler.sched_send_msg(NO_DELTA, self.id(), channel, msg);
+            scheduler.send_msg(self.id(), channel, msg);
         }
     }
 

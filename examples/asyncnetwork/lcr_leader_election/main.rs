@@ -1,9 +1,8 @@
 mod asynchlcr;
 
-use grappy::simbase::Simulation;
-use grappy::simbase::Components;
-use grappy::keys::ComponentId;
-use grappy::channel::asynch::AsynchChannelBuilder;
+use d2simrs::sim::Simulation;
+use d2simrs::keys::ComponentId;
+use d2simrs::channels::delay_channel::DelayChannelBuilder;
 use crate::asynchlcr::ProcessBuilder;
 
 // fn validate<'a>(components: &Components) -> bool {
@@ -27,7 +26,7 @@ fn main() {
 		// println!("created node {:?}", nodes[n]);
 	}
 
-	let mut builder = AsynchChannelBuilder::default();
+	let mut builder = DelayChannelBuilder::default();
 	let delay1ms = std::time::Duration::from_millis(1);
 
 	// connect nodes by channels in a ring

@@ -1,8 +1,7 @@
-use grappy::channel::synch::SynchChannelBuilder;
-use grappy::component::Component;
-use grappy::keys::ComponentId;
-use grappy::simbase::{Simulation};
-// use std::any::Any;
+use d2simrs::synch::channel::BasicChannelBuilder;
+use d2simrs::component::Component;
+use d2simrs::keys::ComponentId;
+use d2simrs::sim::{Simulation};
 
 use crate::lcr::{ProcessBuilder};
 
@@ -87,7 +86,7 @@ fn main() {
 
 	// connect nodes by channels in a ring
 
-	let mut channel_builder = SynchChannelBuilder {};
+	let mut channel_builder = BasicChannelBuilder {};
 
 	for idx0 in 0..NUM_NODES {
 		let idx1  = (idx0 + 1) % NUM_NODES;

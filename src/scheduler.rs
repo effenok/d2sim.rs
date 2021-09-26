@@ -4,6 +4,7 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::cmp::PartialEq;
 use std::time::Duration;
+use crate::environment::Environment;
 
 #[derive(Debug)]
 pub struct ProcessEvent {
@@ -67,7 +68,7 @@ impl SimTime {
         self.time = new_time.time;
     }
 
-    fn is_zero(&self) -> bool {
+    pub fn is_zero(&self) -> bool {
         return self.time.as_secs() == 0 && self.time.as_nanos() == 0;
     }
 
@@ -118,19 +119,24 @@ pub enum SimStatus {
 pub struct Scheduler
 {
     events: BinaryHeap<ScheduledEvent>,
-    pub curr_time: SimTime,
+    curr_time: SimTime,
+    pub(crate) env: Environment,
     sim_status: SimStatus,
 }
 
 impl Scheduler
 {
     pub fn new() -> Self {
-        Scheduler { events: BinaryHeap::default(), curr_time: SimTime::default(), sim_result: SimStatus::Ok}
+        Scheduler { events: BinaryHeap::default(), curr_time: SimTime::default(), env: Environment::default(), sim_status: SimStatus::Ok}
+    }
+
+    pub fn get_curr_time(&self) -> &SimTime {
+        return &self.curr_time;
     }
 
     pub fn next_event(&mut self) -> EventType {
 
-        if let SimStatus::Failure = sim_result {
+        if let SimStatus::Failure = self.sim_status {
             return EventType::EndSimulation;
         }
 
@@ -148,12 +154,16 @@ impl Scheduler
         return event.event;
     }
 
-    pub fn sched_send_msg(&mut self, timedelta: SimTimeDelta, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
+    pub fn send_msg_delayed(&mut self, timedelta: SimTimeDelta, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
         let time = self.curr_time + timedelta;
         let event = ScheduledEvent { time, event: EventType::MsgSendEvent(
             MessageSendEvent { sender, channel, message }
         )};
         self.events.push(event);
+    }
+
+    pub fn send_msg(&mut self, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>){
+        self.send_msg_delayed(NO_DELTA, sender, channel, message);
     }
 
     pub fn sched_receive_msg(&mut self, timedelta: SimTimeDelta, receiver: ComponentId, channel: ChannelId, message: Box<dyn Any>) {

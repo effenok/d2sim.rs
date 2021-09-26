@@ -3,7 +3,7 @@ use crate::keys::{ComponentId, ChannelId};
 use crate::scheduler::Scheduler;
 use std::any::Any;
 
-
+#[derive(Debug)]
 pub enum ChannelLabel {
     Left, Right
 }
@@ -29,35 +29,36 @@ impl ComponentBase {
 
 pub trait Component {
 
-    fn get_sim_base(&mut self) -> &mut ComponentBase {
+    fn get_sim_base_mut(&mut self) -> &mut ComponentBase {
         todo!("implement me or implement add_channel() function")
     }
 
     fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
-        self.get_sim_base().add_channel(channel_id, label);
+        self.get_sim_base_mut().add_channel(channel_id, label);
     }
 
-    fn init(&mut self, scheduler: &mut Scheduler, env: &mut Environment );
+    fn init(&mut self, scheduler: &mut Scheduler);
 
     fn process_event(&mut self,
                      sender: ComponentId,
                      event: Box::<dyn Any>,
                      scheduler: &mut Scheduler,
-                     env: &mut Environment
     );
 
     fn receive_msg(&mut self,
                    incoming_channel: ChannelId,
                    msg: Box<dyn Any>,
                    scheduler: &mut Scheduler,
-                   env: &mut Environment
     );
 
     fn terminate(&mut self, env: &mut Environment );
 }
 
+pub trait StaticComponentBuilder {
+    type C : Component;
 
-// fn start(&mut self, scheduler: &mut RoundScheduler, env: &mut Environment );
+    fn build_component(&mut self, pid: ComponentId, env: &mut Environment) -> Self::C;
+}
 
 pub trait ComponentBuilder {
     fn build_component(&mut self, pid: ComponentId, env: &mut Environment) -> Box<dyn Component>;

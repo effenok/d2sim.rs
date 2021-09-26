@@ -1,12 +1,14 @@
 use std::fmt::Debug;
 use std::any::Any;
 
-use grappy::environment::Environment;
-use grappy::util::uid::UIdGenRandom;
-use grappy::util::uid::UniqueId;
-use grappy::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
-use grappy::keys::{ComponentId, ChannelId};
-use grappy::scheduler::{Scheduler, NO_DELTA};
+use d2simrs::environment::Environment;
+use d2simrs::util::uid::UIdGenRandom;
+use d2simrs::util::uid::UniqueId;
+use d2simrs::component::{ComponentBuilder, Component, ChannelLabel};
+use d2simrs::keys::{ComponentId, ChannelId};
+use d2simrs::scheduler::{Scheduler, SimTime};
+use d2simrs::synch::process::{SynchProcess, ProcessId};
+use std::fmt;
 
 // process builder -------------------
 pub struct ProcessBuilder {
@@ -23,11 +25,12 @@ impl ComponentBuilder for ProcessBuilder {
 
     fn build_component(&mut self, pid: ComponentId, _env: &mut Environment) -> Box<dyn Component> {
         Box::new( Process {
-            component_id: pid,
+            process_id: pid,
             left: ChannelId::default(),
             right: ChannelId::default(),
+            curr_round: SimTime::default(),
             uid: self.uid_gen.generate_uid(),
-            state: ProcessState::Unknown,
+            state: State::Unknown,
         })
     }
 }
@@ -37,24 +40,22 @@ impl ComponentBuilder for ProcessBuilder {
 // process  -------------------
 
 #[derive(Debug)]
-pub enum ProcessState {
-    Unknown, Leader, Terminated(UniqueId),
+pub enum State {
+    Unknown, Leader, NonLeader(UniqueId),
 }
 
 #[derive(Debug)]
 pub struct Process {
-    pub component_id: ComponentId,
+    pub process_id: ProcessId,
     pub left: ChannelId,
     pub right: ChannelId,
+    curr_round: SimTime,
     //--------
     pub uid: UniqueId,
-    pub state: ProcessState,
+    pub state: State,
 }
 
-impl Component for Process {
-    fn get_sim_base(&mut self) -> &mut ComponentBase {
-        panic!("Process does not use ComponentBase");
-    }
+impl SynchProcess for Process {
 
     fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
         match label {
@@ -63,42 +64,52 @@ impl Component for Process {
         }
     }
 
-    fn init(&mut self, scheduler: &mut Scheduler, _env: &mut Environment) {
-        // assert correct variables
+    fn id(&self) -> ProcessId {
+        self.process_id
+    }
+
+    fn get_curr_round(&self) -> &SimTime {
+        &self.curr_round
+    }
+
+    fn set_curr_round(&mut self, round: SimTime) {
+        self.curr_round = round;
+    }
+
+    //-------------------------------------
+
+    fn init(&mut self, _env: &mut Environment) {
         assert!(self.left.is_initialized());
         assert!(self.right.is_initialized());
-
-        println!{"initialized process {:?}", self}
-        scheduler.sched_self_event(NO_DELTA, self.id());
     }
 
-    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut Scheduler, _env: &mut Environment) {
-        println!{"[round {}] starting process {:?}", scheduler.curr_time.as_rounds(), self}
-        // this is call to start function
-        assert_eq!(self.id(), sender);
-        if let Some((channel, msg)) = self.round0() {
-            scheduler.sched_send_msg(NO_DELTA, self.id(), channel, msg);
-        }
+
+    fn round_zero(&mut self, scheduler: &mut Scheduler) {
+        println!{"[round {}] starting process {}", self.curr_round.as_rounds(), self}
+        let channel = self.left();
+        let msg = Box::new(Message::new_send_uid(self.uid));
+        println!{"\t sending message {:?} on channel {:?}", msg, channel}
+        scheduler.send_msg(self.id(), channel, msg);
     }
 
-    fn receive_msg(&mut self,
-                   incoming_channel: ChannelId,
-                   msg: Box<dyn Any>,
-                   scheduler: &mut Scheduler,
-                   _env: &mut Environment
-    ) {
+    fn start_new_round(&mut self, _scheduler: &mut Scheduler) {
+        // do nothing
+    }
+
+    fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>, scheduler: &mut Scheduler) {
+
         let msg = msg.downcast::<Message>().unwrap();
-        println!{"[round {}] process {:?} received msg {:?} on channel {:?}",
-                 scheduler.curr_time.as_rounds(), self, msg, incoming_channel}
+        println!{"[round {}] process {} received msg {:?} on channel {:?}",
+                 self.curr_round.as_rounds(), self, msg, incoming_channel}
         if let Some((channel, msg))  = self.round(incoming_channel, msg) {
-            scheduler.sched_send_msg(NO_DELTA, self.id(), channel, msg);
+            scheduler.send_msg(self.id(), channel, msg);
         }
     }
 
     fn terminate(&mut self, _env: &mut Environment) {
         println!{"terminating process {:?}", self}
         match self.state {
-            ProcessState::Unknown => {assert!(false)}
+            State::Unknown => {assert!(false)}
             // Leader => {
             //     println!("\tI am the leader")
             // }
@@ -109,20 +120,12 @@ impl Component for Process {
 
 impl Process {
 
-    fn round0(&mut self) -> Option<(ChannelId, Box<Message>)>{
-
-        let channel = self.left();
-        let msg = Box::new(Message::new_msg(self.uid));
-        println!{"\t sending message {:?} on channel {:?}", msg, channel}
-        return Some((channel, msg));
-    }
-
     fn round(&mut self, incoming_channel: ChannelId, msg: Box<Message>) -> Option<(ChannelId, Box<Message>)> {
 
         assert_eq!(incoming_channel, self.right());
 
         return match self.state {
-            ProcessState::Unknown => {
+            State::Unknown => {
                 match *msg {
                     Message::SendUId(sender) => {
                         if sender > self.uid {
@@ -138,7 +141,7 @@ impl Process {
                             let channel = self.left();
                             println!("\tsender={:?} = myuid={:?}, i am leader, sending terminate to the left on channel {:?}"
                                      , sender, self.uid, channel);
-                            self.state = ProcessState::Leader;
+                            self.state = State::Leader;
 
                             let msg = Box::new(Message::new_terminate(self.uid));
                             Some((channel, msg))
@@ -147,19 +150,19 @@ impl Process {
                     Message::Terminate(leader) => {
                         let channel = self.left();
                         println!("\tleader = {:?}, sending terminate to the left on channel {:?}", leader, channel);
-                        self.state = ProcessState::Terminated(leader);
+                        self.state = State::NonLeader(leader);
                         Some((channel, msg))
                     }
                 }
             }
-            ProcessState::Leader => {
+            State::Leader => {
                 if let Message::Terminate(leader) = *msg {
                     assert_eq!(leader, self.uid, "")
                 } else { assert!(false) }
 
                 None
             }
-            ProcessState::Terminated(_) => {
+            State::NonLeader(_) => {
                 // TODO: some kind of runtime exception
                 assert!(false, "Unexpected message");
                 None
@@ -167,11 +170,15 @@ impl Process {
         }
     }
 
-    fn id(&self) -> ComponentId { self.component_id}
-
     fn left(&self) -> ChannelId { self.left }
 
     fn right(&self) -> ChannelId { self.right}
+}
+
+impl std::fmt::Display for Process {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Process {{ process_id {:?}, uid {:?} }}", self.id(), self.uid)
+    }
 }
 
 // end process  -------------------
@@ -185,7 +192,7 @@ enum Message {
 }
 
 impl Message {
-    fn new_msg(uid: UniqueId) -> Self {Self::SendUId(uid)}
+    fn new_send_uid(uid: UniqueId) -> Self {Self::SendUId(uid)}
     fn new_terminate(leader: UniqueId) -> Self {Self::Terminate (leader)}
 }
 // end message -------------------

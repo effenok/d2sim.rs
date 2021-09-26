@@ -1,6 +1,5 @@
 use crate::scheduler::{EventType, Scheduler};
 use crate::component::{Component, ComponentBuilder, ChannelLabel};
-use crate::environment::Environment;
 use crate::keys::{ComponentId, ChannelId};
 
 use crate::channel::ChannelTrait;
@@ -14,8 +13,6 @@ pub struct Simulation<CB>
     components: Components,
     channels: Vec<CB::C>,
     scheduler: Scheduler,
-    env: Environment,
-    // sim_keys: SimKeys,
 }
 
 impl<CB: ChannelBuilder> Default for Simulation<CB> {
@@ -24,8 +21,6 @@ impl<CB: ChannelBuilder> Default for Simulation<CB> {
             components: Vec::new(),
             channels: Vec::new(),
             scheduler: Scheduler::new(),
-            env: Environment::default(),
-            // sim_keys: SimKeys::default()
         }
     }
 }
@@ -36,7 +31,7 @@ impl<CB: ChannelBuilder> Simulation<CB> {
         let id = self.components.len();
         let id = ComponentId::new(id);
 
-        self.components.push(builder.build_component(id, &mut self.env));
+        self.components.push(builder.build_component(id, &mut self.scheduler.env));
         id
     }
 
@@ -55,7 +50,7 @@ impl<CB: ChannelBuilder> Simulation<CB> {
         println!("\nInitializing simulation: #components {}", self.components.len());
         for p in self.components.iter_mut() {
             // debug(p);
-            p.init(&mut self.scheduler, &mut self.env);
+            p.init(&mut self.scheduler);
         }
     }
 
@@ -66,7 +61,7 @@ impl<CB: ChannelBuilder> Simulation<CB> {
         match event {
             EventType::ProcessEvent(ev_data) => {
                 let component = &mut self.components[ev_data.receiver.as_idx()];
-                component.process_event(ev_data.sender, ev_data.event, &mut self.scheduler, &mut self.env);
+                component.process_event(ev_data.sender, ev_data.event, &mut self.scheduler);
             },
             EventType::MsgSendEvent(ev_data) => {
                 let channel = &mut self.channels[ev_data.channel.as_idx()];
@@ -75,7 +70,7 @@ impl<CB: ChannelBuilder> Simulation<CB> {
             EventType::MsgRcvEvent(ev_data) => {
                 // println!("event at time: {}", self.scheduler.curr_time);
                 let component = &mut self.components[ev_data.receiver.as_idx()];
-                component.receive_msg(ev_data.channel, ev_data.message, &mut self.scheduler, &mut self.env);
+                component.receive_msg(ev_data.channel, ev_data.message, &mut self.scheduler);
             }
             EventType::EndSimulation => {return false;}
         }
@@ -91,10 +86,10 @@ impl<CB: ChannelBuilder> Simulation<CB> {
 
     // TODO: validate accepts immutable iterator for map
     pub fn call_terminate(&mut self) {
-        println!("\nSimulation completed in {:?} time units", self.scheduler.curr_time);
+        println!("\nSimulation completed in {:?} time units", self.scheduler.get_curr_time());
         for p in self.components.iter_mut() {
             // debug(p);
-            p.terminate(&mut self.env);
+            p.terminate(&mut self.scheduler.env);
         }
     }
 
