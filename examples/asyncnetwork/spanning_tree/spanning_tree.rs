@@ -4,7 +4,7 @@ use std::any::Any;
 use d2simrs::environment::Environment;
 use d2simrs::util::uid::UIdGenRandom;
 use d2simrs::util::uid::UniqueId;
-use d2simrs::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
+use d2simrs::component::{ComponentBuilder, Component, ComponentBase};
 use d2simrs::keys::{ComponentId, ChannelId};
 use d2simrs::scheduler::{Scheduler, NO_DELTA, SimTimeDelta};
 use d2simrs::channel::ChannelBuilder;
@@ -71,7 +71,7 @@ impl ComponentBuilder for ProcessBuilder {
 // process  -------------------
 
 #[derive(Debug)]
-struct TreeInfo {
+pub struct TreeInfo {
     parent: UniqueId,
     root: UniqueId
 }
