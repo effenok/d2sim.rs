@@ -41,7 +41,7 @@ pub struct SimTimeDelta {
 }
 
 impl SimTimeDelta {
-    pub(crate) fn from_duration(delta: Duration) -> Self {
+    pub fn from_duration(delta: Duration) -> Self {
         SimTimeDelta {delta}
     }
 }

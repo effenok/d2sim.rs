@@ -29,8 +29,16 @@ impl ComponentBase {
 
 pub trait Component {
 
+    fn get_sim_base(&self) -> &ComponentBase {
+        todo!("implement me or implement add_channel() function")
+    }
+
     fn get_sim_base_mut(&mut self) -> &mut ComponentBase {
         todo!("implement me or implement add_channel() function")
+    }
+
+    fn sim_id(&self) -> ComponentId {
+        return self.get_sim_base().component_id;
     }
 
     fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {

@@ -1,11 +1,12 @@
 [package]
-name = "grappy"
+name = "d2simrs"
 version = "0.1.0"
 authors = ["effie"]
 edition = "2018"
 
 [dependencies]
 rand = "0.8.4"
+petgraph = "0.6.0"
 
 [[example]]
 name = "synch_lcr"
@@ -14,6 +15,14 @@ path = "examples/synch/lcr_leader_election/main.rs"
 [[example]]
 name = "asynch_lcr"
 path = "examples/asyncnetwork/lcr_leader_election/main.rs"
+
+[[example]]
+name = "spanning_tree"
+path = "examples/asyncnetwork/spanning_tree/main.rs"
+
+#[[example]]
+#name = "synch_floodmax"
+#path = "examples/synch/flood_max/main.rs"
 
 #[[bin]]
 #name = "lcr"
