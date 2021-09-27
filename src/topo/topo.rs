@@ -4,20 +4,23 @@ use petgraph::graph::UnGraph;
 use crate::sim::Simulation;
 use crate::channel::ChannelBuilder;
 
-struct Point {
-    x: f32,
-    y: f32,
+#[derive(Debug)]
+pub struct Point {
+    pub x: f64,
+    pub y: f64,
 }
 
-// #[derive(Debug)]
-pub(super) struct TopoNode {
-    pub(super) component_id: Option<ComponentId>,
+#[derive(Debug)]
+pub struct TopoNode {
+    pub component_id: Option<ComponentId>,
+    pub point: Point,
     // component_data: Box<dyn Component>
 }
 
 #[derive(Debug, Default)]
-pub(super) struct TopoEdge {
-    pub(super) channle_id: Option<ChannelId>,
+pub struct TopoEdge {
+    pub channle_id: Option<ChannelId>,
+    pub weight: f64,
     // delay: std::time::Duration,
 }
 

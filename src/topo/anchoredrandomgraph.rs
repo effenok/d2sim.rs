@@ -1,9 +1,10 @@
 // TODO: separate utility if possible?
+// TODO: trait - need check connectivity?
 
-use crate::topo::topo::{TopoGraph, TopoNode, TopoEdge, Topology};
+use crate::topo::topo::{TopoGraph, TopoEdge};
 use petgraph::graph::NodeIndex;
 use rand::Rng;
-use petgraph::algo::connected_components;
+use crate::topo::topogen::EdgesGenerator;
 
 pub struct AnchoredRandomGraphGen {
     num_nodes: usize,
@@ -12,7 +13,6 @@ pub struct AnchoredRandomGraphGen {
 }
 
 impl AnchoredRandomGraphGen {
-
     pub fn new(num_nodes: usize, connectivity: f64) -> Self {
         AnchoredRandomGraphGen::new1(num_nodes, connectivity, 1)
     }
@@ -24,18 +24,19 @@ impl AnchoredRandomGraphGen {
             (connectivity * num_nodes_f * num_nodes_f / 2.0).ceil() as usize,
             ((minimum_degree as f64) * num_nodes_f / 2.0).ceil() as usize
         );
-        
+
         AnchoredRandomGraphGen {
             num_nodes,
             minimum_degree,
             num_edges,
         }
     }
+}
 
-    fn generate_nodes(&mut self, g: &mut TopoGraph) {
-        for _ in 0..self.num_nodes {
-            g.add_node(TopoNode{component_id: None });
-        }
+impl EdgesGenerator for AnchoredRandomGraphGen {
+
+    fn estimated_edges_count(&mut self) -> usize {
+        self.num_edges
     }
 
     fn generate_edges(&mut self, g: &mut TopoGraph) {
@@ -71,35 +72,5 @@ impl AnchoredRandomGraphGen {
             }
 
         }
-
-        eprintln!("g.node_count() = {:?}", g.node_count());
-        eprintln!("g.edge_count() = {:?}", g.edge_count());
-        eprintln!("edges_left = {:?}", edges_left);
-    }
-
-    pub fn generate_connected_graph(&mut self, max_iter: usize) -> Topology {
-        let mut g = TopoGraph::with_capacity(self.num_nodes, self.num_edges);
-
-        self.generate_nodes(&mut g);
-
-        for _ in 0..max_iter {
-            self.generate_edges(&mut g);
-
-            if connected_components(&g) == 1 {
-                return Topology {g: g};
-            }
-
-           g.clear_edges();
-        }
-
-        // TODO: return Result;
-        panic!("could not generate topo in {} iterations", max_iter);
-    }
-
-    pub fn generate_graph(&mut self) -> Topology {
-        let mut g = TopoGraph::with_capacity(self.num_nodes, self.num_edges);
-        self.generate_nodes(&mut g);
-        self.generate_edges(&mut g);
-        return Topology {g: g};
     }
 }
