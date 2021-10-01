@@ -1,6 +1,6 @@
 use crate::keys::{ChannelId, ComponentId};
 use std::any::Any;
-use crate::channel::{ChannelTrait, ChannelBuilder};
+use crate::channel::{Channel, ChannelBuilder};
 use crate::simtime::SimTimeDelta;
 use std::time::Duration;
 use crate::simvars::sim_sched;
@@ -14,7 +14,7 @@ pub struct BasicChannel {
     pub right: ComponentId,
 }
 
-impl ChannelTrait for BasicChannel {
+impl Channel for BasicChannel {
     fn accept_message_from(&mut self,
                            source: ComponentId,
                            message: Box<dyn Any>,

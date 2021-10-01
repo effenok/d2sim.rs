@@ -1,7 +1,7 @@
 use crate::scheduler::{EventType};
 use crate::component::{Component, ComponentBuilder, ChannelLabel};
 use crate::keys::{ComponentId, ChannelId};
-use crate::channel::ChannelTrait;
+use crate::channel::Channel;
 use crate::channel::ChannelBuilder;
 use crate::simtime::SimTime;
 use crate::simvars::{SIM, sim_sched};
