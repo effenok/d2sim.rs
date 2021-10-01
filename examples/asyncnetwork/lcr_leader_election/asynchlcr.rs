@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 use std::any::Any;
 
-use d2simrs::environment::Environment;
 use d2simrs::util::uid::UIdGenRandom;
 use d2simrs::util::uid::UniqueId;
-use d2simrs::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
+use d2simrs::component::{ComponentBuilder, Component, ChannelLabel};
 use d2simrs::keys::{ComponentId, ChannelId};
-use d2simrs::scheduler::{Scheduler, NO_DELTA};
+use d2simrs::scheduler::{Scheduler};
+use d2simrs::simvars::{sim_sched, sim_time};
+use d2simrs::simtime::NO_DELTA;
 
 // process builder -------------------
 pub struct ProcessBuilder {
@@ -21,7 +22,7 @@ impl ProcessBuilder {
 
 impl ComponentBuilder for ProcessBuilder {
 
-    fn build_component(&mut self, pid: ComponentId, _env: &mut Environment) -> Box<dyn Component> {
+    fn build_component(&mut self, pid: ComponentId) -> Box<dyn Component> {
         Box::new( Process {
             component_id: pid,
             left: ChannelId::default(),
@@ -53,8 +54,8 @@ pub struct Process {
 
 impl Component for Process {
 
-    fn get_sim_base_mut(&mut self) -> &mut ComponentBase {
-        panic!("Process does not use ComponentBase");
+    fn sim_id(&self) -> ComponentId {
+        self.component_id
     }
 
     fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
@@ -64,38 +65,37 @@ impl Component for Process {
         }
     }
 
-    fn init(&mut self, scheduler: &mut Scheduler) {
+    fn init(&mut self) {
         // assert correct variables
         assert!(self.left.is_initialized());
         assert!(self.right.is_initialized());
 
         println!{"initialized process {:?}", self}
-        scheduler.sched_self_event(NO_DELTA, self.id());
+        sim_sched().sched_self_event(NO_DELTA, self.id());
     }
 
-    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut Scheduler) {
-        println!{"[time {}ms] starting process {:?}", scheduler.get_curr_time().as_millis(), self}
+    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>) {
+        println!{"[time {}ms] starting process {:?}", sim_time().as_millis(), self}
         // this is call to start function
         assert_eq!(self.id(), sender);
         if let Some((channel, msg)) = self.round0() {
-            scheduler.send_msg(self.id(), channel, msg);
+            sim_sched().send_msg(self.id(), channel, msg);
         }
     }
 
     fn receive_msg(&mut self,
                    incoming_channel: ChannelId,
                    msg: Box<dyn Any>,
-                   scheduler: &mut Scheduler
     ) {
         let msg = msg.downcast::<Message>().unwrap();
         println!{"[time {}ms] process {:?} received msg {:?} on channel {:?}",
-                 scheduler.get_curr_time().as_millis(), self, msg, incoming_channel}
+                 sim_time().as_millis(), self, msg, incoming_channel}
         if let Some((channel, msg))  = self.round(incoming_channel, msg) {
-            scheduler.send_msg(self.id(), channel, msg);
+            sim_sched().send_msg(self.id(), channel, msg);
         }
     }
 
-    fn terminate(&mut self, _env: &mut Environment) {
+    fn terminate(&mut self) {
         println!{"terminating process {:?}", self}
         match self.state {
             ProcessState::Unknown => {assert!(false)}

@@ -1,16 +1,16 @@
 use std::fmt::Debug;
 use std::any::Any;
 
-use d2simrs::environment::Environment;
 use d2simrs::util::uid::UIdGenRandom;
 use d2simrs::util::uid::UniqueId;
-use d2simrs::component::{ComponentBuilder, Component, ComponentBase};
+use d2simrs::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
 use d2simrs::keys::{ComponentId, ChannelId};
-use d2simrs::scheduler::{Scheduler, NO_DELTA, SimTimeDelta};
 use d2simrs::channel::ChannelBuilder;
 use d2simrs::channels::delay_channel::DelayChannel;
 use rand::Rng;
 use std::fmt;
+use d2simrs::simtime::{SimTimeDelta, NO_DELTA};
+use d2simrs::simvars::{sim_sched, sim_time};
 
 // random delay channel builder ----------
 
@@ -30,7 +30,7 @@ impl ChannelBuilder for RandomDelayChannelBuilder {
         let delay_ms = rand::thread_rng().gen_range(1..11);
         let delay = std::time::Duration::from_millis(delay_ms);
 
-        DelayChannel { id, left, right, delay: SimTimeDelta::from_duration(delay)}
+        DelayChannel { id, left, right, delay: SimTimeDelta::from(delay)}
     }
 }
 
@@ -48,7 +48,7 @@ impl ProcessBuilder {
 
 impl ComponentBuilder for ProcessBuilder {
 
-    fn build_component(&mut self, pid: ComponentId, _env: &mut Environment) -> Box<dyn Component> {
+    fn build_component(&mut self, pid: ComponentId) -> Box<dyn Component> {
         let state;
 
         if self.has_root {
@@ -90,40 +90,43 @@ pub struct Process {
 }
 
 impl Component for Process {
-    fn get_sim_base(&self) -> &ComponentBase { return &self.base; }
-    fn get_sim_base_mut(&mut self) -> &mut ComponentBase {
-        return &mut self.base;
+
+    fn sim_id(&self) -> ComponentId {
+        self.base.component_id
     }
 
-    fn init(&mut self, scheduler: &mut Scheduler) {
+    fn add_channel(&mut self, channel_id: ChannelId, _label: ChannelLabel) {
+        self.base.channels.push(channel_id);
+    }
+
+    fn init(&mut self) {
         println!{"initialized process {:?}", self}
 
         if let State::Root = self.state {
-            scheduler.sched_self_event(NO_DELTA, self.sim_id());
+            sim_sched().sched_self_event(NO_DELTA, self.sim_id());
         }
     }
 
-    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut Scheduler) {
+    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>) {
         assert_eq!(sender, self.sim_id());
-        println!("[time {}ms] starting process {:?}", scheduler.get_curr_time().as_millis(), self);
+        println!("[time {}ms] starting process {:?}", sim_time().as_millis(), self);
 
         for channel in &self.base.channels {
             let msg = Box::new(Message::new(
                 self.uid, self.uid
             ));
             println!{"\t sending message {:?} on channel {:?}", msg, channel}
-            scheduler.send_msg(self.sim_id(), *channel, msg);
+            sim_sched().send_msg(self.sim_id(), *channel, msg);
         }
     }
 
     fn receive_msg(&mut self,
                    incoming_channel: ChannelId,
-                   msg: Box<dyn Any>,
-                   scheduler: &mut Scheduler
+                   msg: Box<dyn Any>
     ) {
         let msg = msg.downcast::<Message>().unwrap();
         println!{"[time {}ms] process {} received msg {:?} on channel {:?}",
-                 scheduler.get_curr_time().as_millis(), self, msg, incoming_channel};
+                 sim_time().as_millis(), self, msg, incoming_channel};
 
         match &self.state {
             State::Unmarked => {
@@ -133,7 +136,7 @@ impl Component for Process {
                             msg.root, self.uid
                         ));
                         println!{"\t sending message {:?} on channel {:?}", msg, channel}
-                        scheduler.send_msg(self.sim_id(), *channel, my_msg);
+                        sim_sched().send_msg(self.sim_id(), *channel, my_msg);
                     }
                 }
 
@@ -146,7 +149,7 @@ impl Component for Process {
         };
     }
 
-    fn terminate(&mut self, _env: &mut Environment) {
+    fn terminate(&mut self) {
         println!{"terminating process {:?}", self}
 
         if let State::Unmarked = self.state {

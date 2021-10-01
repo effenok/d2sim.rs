@@ -1,14 +1,14 @@
 use std::fmt::Debug;
 use std::any::Any;
 
-use d2simrs::environment::Environment;
 use d2simrs::util::uid::UIdGenRandom;
 use d2simrs::util::uid::UniqueId;
 use d2simrs::component::{ComponentBuilder, Component, ChannelLabel};
 use d2simrs::keys::{ComponentId, ChannelId};
-use d2simrs::scheduler::{Scheduler, SimTime};
 use d2simrs::synch::process::{SynchProcess, ProcessId};
+use d2simrs::simtime::SimTime;
 use std::fmt;
+use d2simrs::simvars::sim_sched;
 
 // process builder -------------------
 pub struct ProcessBuilder {
@@ -23,7 +23,7 @@ impl ProcessBuilder {
 
 impl ComponentBuilder for ProcessBuilder {
 
-    fn build_component(&mut self, pid: ComponentId, _env: &mut Environment) -> Box<dyn Component> {
+    fn build_component(&mut self, pid: ComponentId) -> Box<dyn Component> {
         Box::new( Process {
             process_id: pid,
             left: ChannelId::default(),
@@ -47,6 +47,7 @@ pub enum State {
 #[derive(Debug)]
 pub struct Process {
     pub process_id: ProcessId,
+    // TODO: uninitialized data
     pub left: ChannelId,
     pub right: ChannelId,
     curr_round: SimTime,
@@ -78,35 +79,35 @@ impl SynchProcess for Process {
 
     //-------------------------------------
 
-    fn init(&mut self, _env: &mut Environment) {
+    fn init(&mut self) {
         assert!(self.left.is_initialized());
         assert!(self.right.is_initialized());
     }
 
 
-    fn round_zero(&mut self, scheduler: &mut Scheduler) {
+    fn round_zero(&mut self) {
         println!{"[round {}] starting process {}", self.curr_round.as_rounds(), self}
         let channel = self.left();
         let msg = Box::new(Message::new_send_uid(self.uid));
         println!{"\t sending message {:?} on channel {:?}", msg, channel}
-        scheduler.send_msg(self.id(), channel, msg);
+        sim_sched().send_msg(self.id(), channel, msg);
     }
 
-    fn start_new_round(&mut self, _scheduler: &mut Scheduler) {
+    fn start_new_round(&mut self) {
         // do nothing
     }
 
-    fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>, scheduler: &mut Scheduler) {
+    fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>) {
 
         let msg = msg.downcast::<Message>().unwrap();
         println!{"[round {}] process {} received msg {:?} on channel {:?}",
                  self.curr_round.as_rounds(), self, msg, incoming_channel}
         if let Some((channel, msg))  = self.round(incoming_channel, msg) {
-            scheduler.send_msg(self.id(), channel, msg);
+            sim_sched().send_msg(self.id(), channel, msg);
         }
     }
 
-    fn terminate(&mut self, _env: &mut Environment) {
+    fn terminate(&mut self) {
         println!{"terminating process {:?}", self}
         match self.state {
             State::Unknown => {assert!(false)}
