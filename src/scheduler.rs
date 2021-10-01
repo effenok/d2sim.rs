@@ -1,10 +1,11 @@
-use crate::keys::{ComponentId, ChannelId};
-use std::collections::BinaryHeap;
 use std::any::Any;
 use std::cmp::Ordering;
 use std::cmp::PartialEq;
-use std::time::Duration;
+use std::collections::BinaryHeap;
+
 use crate::environment::Environment;
+use crate::keys::{ChannelId, ComponentId};
+use crate::simtime::{SimTime, SimTimeDelta, NO_DELTA};
 
 #[derive(Debug)]
 pub struct ProcessEvent {
@@ -34,55 +35,6 @@ pub enum EventType {
     MsgRcvEvent(MessageRcvEvent),
     EndSimulation,
 }
-
-#[derive(Debug, Copy, Clone)]
-pub struct SimTimeDelta {
-    delta: Duration
-}
-
-impl SimTimeDelta {
-    pub fn from_duration(delta: Duration) -> Self {
-        SimTimeDelta {delta}
-    }
-}
-
-pub const NO_DELTA: SimTimeDelta = SimTimeDelta { delta: Duration::from_secs(0) };
-pub const ROUND_DELTA: SimTimeDelta = SimTimeDelta { delta: Duration::from_secs(1) };
-
-#[derive(Default, Debug, Ord, PartialOrd, PartialEq, Eq, Copy, Clone)]
-pub struct SimTime {
-    time: Duration,
-}
-
-impl std::ops::Add<SimTimeDelta> for SimTime {
-    type Output = SimTime;
-
-    fn add(self, _rhs: SimTimeDelta) -> SimTime {
-        SimTime { time: self.time + _rhs.delta }
-    }
-}
-
-impl SimTime {
-    fn advance_to (&mut self, new_time: SimTime) {
-        assert!(self.time <= new_time.time, "time mismatch: {:?} {:?}", self, new_time);
-        self.time = new_time.time;
-    }
-
-    pub fn is_zero(&self) -> bool {
-        return self.time.as_secs() == 0 && self.time.as_nanos() == 0;
-    }
-
-    pub fn as_rounds(&self) -> u64 {
-        return self.time.as_secs();
-    }
-
-    // TODO: implement meaningful display for sim_time;
-
-    pub fn as_millis(&self) -> u128 {
-        return self.time.as_millis()
-    }
-}
-
 
 #[derive(Debug)]
 struct ScheduledEvent
@@ -175,14 +127,25 @@ impl Scheduler
     }
 
     pub fn sched_self_event(&mut self, timedelta: SimTimeDelta, process: ComponentId) {
-        assert!(self.curr_time.is_zero());
-
         let time = self.curr_time + timedelta;
         let event = ScheduledEvent { time, event: EventType::ProcessEvent(
             ProcessEvent {
                 sender: process,
                 receiver: process,
                 event: Box::new(std::ptr::null::<usize>())
+            }
+        )};
+        // eprintln!("\t\t\tcreated event = {:?}", event);
+        self.events.push(event);
+    }
+
+    pub fn sched_self_event1(&mut self, timedelta: SimTimeDelta, process: ComponentId, event: Box<dyn Any>) {
+        let time = self.curr_time + timedelta;
+        let event = ScheduledEvent { time, event: EventType::ProcessEvent(
+            ProcessEvent {
+                sender: process,
+                receiver: process,
+                event: event,
             }
         )};
         // eprintln!("\t\t\tcreated event = {:?}", event);

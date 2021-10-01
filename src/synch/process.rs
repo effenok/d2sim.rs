@@ -1,8 +1,8 @@
 use crate::component::{Component, ChannelLabel};
 use crate::keys::{ComponentId, ChannelId};
-use crate::scheduler::{SimTime, Scheduler, NO_DELTA};
-use crate::environment::Environment;
 use std::any::Any;
+use crate::simtime::{SimTime, NO_DELTA};
+use crate::simvars::{sim_sched, sim_time};
 
 pub type ProcessId = ComponentId;
 
@@ -55,55 +55,58 @@ pub trait SynchProcess: Component {
 
     //-----------------------------------------------------------------------
 
-    fn init(&mut self, _env: &mut Environment) {}
+    fn init(&mut self) {}
 
-    fn round_zero(&mut self, scheduler: &mut Scheduler);
+    fn round_zero(&mut self);
 
-    fn start_new_round(&mut self, scheduler: &mut Scheduler);
+    fn start_new_round(&mut self);
 
     fn receive_msg(&mut self,
                          incoming_channel: ChannelId,
                          msg: Box<dyn Any>,
-                         scheduler: &mut Scheduler
     );
 
-    fn terminate(&mut self, env: &mut Environment);
+    fn terminate(&mut self);
 }
 
 impl<P: SynchProcess> Component for P {
+
+    fn sim_id(&self) -> ComponentId {
+       SynchProcess::get_sim_base(self).component_id
+    }
 
     fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
         SynchProcess::add_channel(self, channel_id, label);
     }
 
-    fn init(&mut self, scheduler: &mut Scheduler) {
-        SynchProcess::init(self, &mut scheduler.env);
+    fn init(&mut self) {
+        SynchProcess::init(self);
 
         //println!{"initialized process {:?}", self}
-        scheduler.sched_self_event(NO_DELTA, self.id());
+        sim_sched().sched_self_event(NO_DELTA, self.id());
     }
 
-    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>, scheduler: &mut Scheduler) {
+    fn process_event(&mut self, sender: ComponentId, _event: Box<dyn Any>) {
         //TODO: what about the components that wake up on no input in rounds...
 
         assert_eq!(self.id(), sender);
         assert!(self.get_curr_round().is_zero());
-        assert!(scheduler.get_curr_time().is_zero());
+        assert!(sim_time().is_zero());
 
-        self.round_zero(scheduler);
+        self.round_zero();
     }
 
-    fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>, scheduler: &mut Scheduler) {
-        if self.get_curr_round().as_rounds() != scheduler.get_curr_time().as_rounds() {
-            self.set_curr_round(scheduler.get_curr_time().clone());
-            self.start_new_round(scheduler);
+    fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>) {
+        if self.get_curr_round().as_rounds() != sim_time().as_rounds() {
+            self.set_curr_round(sim_time().clone());
+            self.start_new_round();
         }
 
-        SynchProcess::receive_msg(self, incoming_channel, msg, scheduler);
+        SynchProcess::receive_msg(self, incoming_channel, msg);
 
     }
 
-    fn terminate(&mut self, env: &mut Environment) {
-        SynchProcess::terminate(self, env);
+    fn terminate(&mut self) {
+        SynchProcess::terminate(self);
     }
 }
