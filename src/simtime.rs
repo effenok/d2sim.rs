@@ -37,9 +37,17 @@ impl std::ops::Add<SimTimeDelta> for SimTime {
     }
 }
 
-impl SimTime {
+impl std::ops::Sub<SimTime> for SimTime {
+    type Output = SimTimeDelta;
 
-    pub(super) fn advance_to (&mut self, new_time: SimTime) {
+    fn sub(self, _rhs: SimTime) -> SimTimeDelta {
+        SimTimeDelta::from(self.time - _rhs.time)
+    }
+}
+
+
+impl SimTime {
+    pub(super) fn advance_to(&mut self, new_time: SimTime) {
         assert!(self.time <= new_time.time, "time mismatch: {:?} {:?}", self, new_time);
         self.time = new_time.time;
     }
