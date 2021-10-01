@@ -3,7 +3,7 @@ use std::any::Any;
 
 use d2simrs::util::uid::UIdGenRandom;
 use d2simrs::util::uid::UniqueId;
-use d2simrs::component::{ComponentBuilder, Component, ComponentBase, ChannelLabel};
+use d2simrs::component::{ComponentBuilder, Component, ComponentBase};
 use d2simrs::keys::{ComponentId, ChannelId};
 use d2simrs::channel::ChannelBuilder;
 use d2simrs::channels::delay_channel::DelayChannel;
