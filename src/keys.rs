@@ -1,13 +1,13 @@
 use crate::component::Component;
 use std::marker::PhantomData;
-use crate::channel::ChannelTrait;
+use crate::channel::Channel;
 
 // ChannelId ---------------------------------------------------
 
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(PartialEq, Eq, Copy, Clone, Hash)]
 pub struct ChannelId {
     id: usize,
-    _marker: PhantomData<dyn ChannelTrait>
+    _marker: PhantomData<dyn Channel>
 }
 
 impl Default for ChannelId {

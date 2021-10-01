@@ -6,6 +6,12 @@ use std::collections::HashSet;
 #[derive(Debug,PartialEq,PartialOrd,Default,Copy,Clone)]
 pub struct UniqueId(pub usize);
 
+impl From<usize> for UniqueId {
+    fn from(uid: usize) -> Self {
+        UniqueId{ 0: uid }
+    }
+}
+
 #[derive(Default, Debug)]
 pub struct UIdGenSequential {
     next_uid: usize,
