@@ -20,13 +20,17 @@ path = "examples/asyncnetwork/lcr_leader_election/main.rs"
 name = "spanning_tree"
 path = "examples/asyncnetwork/spanning_tree/main.rs"
 
-#[[example]]
-#name = "synch_floodmax"
-#path = "examples/synch/flood_max/main.rs"
+[[example]]
+name = "simple_dv"
+path = "examples/network/simpledv/main.rs"
 
-#[[bin]]
-#name = "lcr"
-#path = "src/bin/lcr1"
+[[example]]
+name = "net_test"
+path = "examples/network/bypass_borrow/main.rs"
+
+[[example]]
+name = "simple_net"
+path = "examples/network/simple_net/main.rs"
 
 
 #[features]
