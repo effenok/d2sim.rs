@@ -14,3 +14,9 @@ pub enum SimpleAddress {
     UnicastAddress(InterfaceAddress),
     MulticastAddress,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct HostAddr {
+    pub router_id: RouterId,
+    pub interface_id: InterfaceId,
+}

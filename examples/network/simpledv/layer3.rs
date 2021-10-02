@@ -19,16 +19,14 @@ pub struct Layer3Packet {
 }
 
 pub struct Layer3 {
-    parent_id: ComponentId,
-    control_plane: SimpleDiv,
+    pub control_plane: SimpleDiv,
 
     layer2: InternalRef<Layer2>,
 }
 
 impl Layer3 {
-    pub fn new(parent_id: ComponentId, router_id: RouterId) -> Self {
+    pub fn new(router_id: RouterId) -> Self {
         Layer3 {
-            parent_id,
             control_plane: SimpleDiv::new(router_id),
             layer2: InternalRef::new(),
         }

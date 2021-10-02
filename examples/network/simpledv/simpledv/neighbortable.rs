@@ -7,9 +7,16 @@ use crate::router::RouterId;
 use crate::simpledv::addr::InterfaceAddress;
 use crate::types::InterfaceId;
 
+#[derive(Debug, PartialEq)]
+pub enum InterfaceType {
+    EndSystem,
+    EIGRP,
+}
+
 #[derive(Debug)]
 pub struct NeighborTableEntry {
     pub(super) interface_id: InterfaceId,
+    pub(super) interface_type: InterfaceType,
     pub(super) my_addr: InterfaceAddress,
     pub(super) other_addr: Option<InterfaceAddress>,
     pub(super) last_hello_received: SimTime,
@@ -18,9 +25,10 @@ pub struct NeighborTableEntry {
 }
 
 impl NeighborTableEntry {
-    fn new(router_id: RouterId, interface_id: InterfaceId) -> Self {
+    fn new(router_id: RouterId, interface_id: InterfaceId, interface_type: InterfaceType) -> Self {
         NeighborTableEntry {
             interface_id,
+            interface_type,
             my_addr: InterfaceAddress { router_id, interface_id },
             other_addr: None,
             last_hello_received: SimTime::default(),
@@ -38,6 +46,10 @@ impl NeighborTableEntry {
 
     pub fn get_my_addr(&self) -> InterfaceAddress {
         self.my_addr
+    }
+
+    pub fn is_eigrp_interface(&self) -> bool {
+        self.interface_type == InterfaceType::EIGRP
     }
 }
 
@@ -79,9 +91,9 @@ impl NeighborTable {
         NeighborTable { table: Vec::new() }
     }
 
-    pub fn add_entry_for_interface(&mut self, router_id: RouterId, interface_id: InterfaceId) {
+    pub fn add_entry_for_interface(&mut self, router_id: RouterId, interface_id: InterfaceId, interface_type: InterfaceType) {
         assert_eq!(interface_id, self.table.len());
-        self.table.push(NeighborTableEntry::new(router_id, interface_id));
+        self.table.push(NeighborTableEntry::new(router_id, interface_id, interface_type));
     }
 
     pub fn len(&self) -> usize {

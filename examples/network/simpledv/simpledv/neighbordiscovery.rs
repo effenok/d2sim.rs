@@ -5,15 +5,29 @@ use crate::router::InternalEvent;
 use crate::simpledv::{constants, SimpleDiv};
 use crate::simpledv::addr::InterfaceAddress;
 use crate::simpledv::constants::{HELLO_INTERVAL, HOLD_TIME};
+use crate::simpledv::neighbortable::InterfaceType;
 use crate::simpledv::packets::SimpleDVPacket;
 use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
 use crate::types::InterfaceId;
 
 impl SimpleDiv {
+    pub fn add_interface(&mut self, interface_id: InterfaceId) {
+        let interface_type = if self.config.has_interface(interface_id)
+        { InterfaceType::EndSystem } else { InterfaceType::EIGRP };
+
+        self.neighbor_table.add_entry_for_interface(self.router_id, interface_id, interface_type);
+    }
+
     pub fn on_interface_up(&mut self, interface_id: InterfaceId) {
         let mut entry = &mut self.neighbor_table[interface_id];
         entry.is_up = true;
         let if_id = entry.interface_id;
+
+        if !entry.is_eigrp_interface() {
+            println!("\tskipping interface {:?}, interface is not EIGRP", if_id);
+            return;
+        }
+
         println!("\tstarting HELLOs on interface {:?}", if_id);
 
         // send hello

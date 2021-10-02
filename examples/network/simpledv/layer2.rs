@@ -21,7 +21,6 @@ pub struct P2PPacket {
 }
 
 pub struct Layer2 {
-    parent_id: ComponentId,
     interfaces: Vec<P2PLayer2Instance>,
     control_plane: Layer2ControlPlane,
 
@@ -31,9 +30,8 @@ pub struct Layer2 {
 }
 
 impl Layer2 {
-    pub fn new(parent_id: ComponentId) -> Self {
+    pub fn new() -> Self {
         Layer2 {
-            parent_id,
             interfaces: Vec::new(),
             control_plane: Layer2ControlPlane::new(),
 
@@ -57,7 +55,6 @@ impl Layer2 {
         let if_id = InterfaceId::from(self.interfaces.len());
 
         let mut if_ = P2PLayer2Instance {
-            parent_id: self.parent_id,
             interface_id: if_id,
             channel_id,
             is_up: false,
@@ -94,7 +91,6 @@ impl Layer2 {
 //---------------------------------------------------------
 
 struct P2PLayer2Instance {
-    parent_id: ComponentId,
     interface_id: InterfaceId,
     channel_id: ChannelId,
     is_up: bool,
@@ -110,7 +106,6 @@ impl P2PLayer2Instance {
 impl fmt::Debug for P2PLayer2Instance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("P2PLayer2Instance")
-            .field("parent_id", &self.parent_id)
             .field("interface_id", &self.interface_id)
             .field("channel_id", &self.channel_id)
             .finish()

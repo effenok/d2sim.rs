@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use crate::layer2::Layer2;
 use crate::layer3::Layer3;
 use crate::packet::Packet;
+use crate::simpledv::config::HostAddr;
 use crate::types::InterfaceId;
 
 pub type RouterId = UniqueId;
@@ -27,13 +28,22 @@ impl ComponentBuilder for RouterBuilder {
         let mut router = Box::new(Router {
             sim_helper: SimHelper { sim_id: id },
             channel_map: HashMap::new(),
-            layer2: Layer2::new(id),
-            layer3: Layer3::new(id, UniqueId(self.counter)),
+            layer2: Layer2::new(),
+            layer3: Layer3::new(UniqueId(self.counter)),
         });
 
         router.layer3.set_ptrs(&mut router.layer2, &mut router.sim_helper);
         router.layer2.layer3.set(&mut router.layer3);
         router.layer2.sim.set(&mut router.sim_helper);
+
+        if self.counter == 1 {
+            println!("adding config to router 1");
+            let if_id = InterfaceId::from(0);
+            router.layer3.control_plane.config.add_interface(if_id, HostAddr {
+                router_id: UniqueId(self.counter),
+                interface_id: if_id,
+            })
+        }
 
         router
     }

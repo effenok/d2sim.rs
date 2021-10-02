@@ -8,22 +8,24 @@ use crate::layer3::Layer3;
 use crate::packet::Packet;
 use crate::router::{InternalEvent, RouterId, SimHelper};
 use crate::simpledv::addr::InterfaceAddress;
+use crate::simpledv::config::Config;
 use crate::simpledv::constants::{HELLO_INTERVAL, HOLD_TIME};
 use crate::simpledv::neighbortable::NeighborTable;
 use crate::simpledv::packets::{SimpleDVPacket, SimpleDVPacketType};
 use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
 use crate::types::InterfaceId;
 
-mod addr;
+pub mod addr;
 mod constants;
 mod packets;
 mod timer;
 mod neighbordiscovery;
 mod neighbortable;
+pub mod config;
 
 pub struct SimpleDiv {
     router_id: RouterId,
-
+    pub config: Config,
     neighbor_table: NeighborTable,
 
     pub(super) layer3: InternalRef<Layer3>,
@@ -34,14 +36,11 @@ impl SimpleDiv {
     pub fn new(router_id: RouterId) -> Self {
         SimpleDiv {
             router_id,
+            config: Config::new(),
             neighbor_table: NeighborTable::new(),
             layer3: InternalRef::new(),
             sim: InternalRef::new(),
         }
-    }
-
-    pub fn add_interface(&mut self, interface_id: InterfaceId) {
-        self.neighbor_table.add_entry_for_interface(self.router_id, interface_id);
     }
 
     pub fn start(&mut self) {
@@ -59,7 +58,6 @@ impl SimpleDiv {
         }
     }
 
-
     pub fn timeout(&mut self, ev: Box<dyn Any>) {
         if ev.is::<HelloTimer>() {
             let hello_timer = ev.downcast::<HelloTimer>().unwrap();
@@ -72,7 +70,6 @@ impl SimpleDiv {
             todo!()
         }
     }
-
 
     pub fn terminate(&mut self) {
         println!("\tInterface Table of Router {:?}", self.router_id);
