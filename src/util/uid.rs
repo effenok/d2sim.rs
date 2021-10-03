@@ -1,14 +1,22 @@
 use rand::Rng;
+
 use std::collections::HashSet;
+use std::fmt;
 
 //TODO: generic UID?
 
-#[derive(Debug,PartialEq,PartialOrd,Default,Copy,Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Default, Copy, Clone)]
 pub struct UniqueId(pub usize);
+
+impl fmt::Display for UniqueId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl From<usize> for UniqueId {
     fn from(uid: usize) -> Self {
-        UniqueId{ 0: uid }
+        UniqueId { 0: uid }
     }
 }
 
