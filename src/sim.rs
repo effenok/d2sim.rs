@@ -1,15 +1,15 @@
-use crate::scheduler::{EventType};
-use crate::component::{Component, ComponentBuilder, ChannelLabel};
-use crate::keys::{ComponentId, ChannelId};
 use crate::channel::Channel;
 use crate::channel::ChannelBuilder;
+use crate::component::{ChannelLabel, Component, ComponentBuilder};
+use crate::keys::{ChannelId, ComponentId};
+use crate::scheduler::EventType;
 use crate::simtime::SimTime;
 use crate::simvars::{SIM, sim_sched};
 
 pub type Components = Vec<Box<dyn Component>>;
 
 pub struct Simulation<CB>
-    where CB : ChannelBuilder
+    where CB: ChannelBuilder
 {
     components: Components,
     channels: Vec<CB::C>,
@@ -87,20 +87,24 @@ impl<CB: ChannelBuilder> Simulation<CB> {
         true
     }
 
-    pub fn run(&mut self)  {
+    pub fn run(&mut self) -> Result<(), ()> {
         // eprintln!("self.scheduler.events = {:?}", self.scheduler.events);
         println!("\nRunning simulation");
-        while self.step(){}
+        while self.step() {}
+
+        sim_sched().sim_status()
     }
 
-    pub fn run_until(&mut self, time: SimTime) {
+    pub fn run_until(&mut self, time: SimTime) -> Result<(), ()> {
         println!("\nRunning simulation until {:?}", time);
-        while self.step(){
+        while self.step() {
             // TODO: compare with first event on the queue
             if sim_sched().get_curr_time() > &time {
                 break;
             }
         }
+
+        sim_sched().sim_status()
     }
 
     // TODO: validate accepts immutable iterator for map

@@ -5,7 +5,7 @@ use std::collections::BinaryHeap;
 
 use crate::environment::Environment;
 use crate::keys::{ChannelId, ComponentId};
-use crate::simtime::{SimTime, SimTimeDelta, NO_DELTA};
+use crate::simtime::{NO_DELTA, SimTime, SimTimeDelta};
 
 #[derive(Debug)]
 pub struct ProcessEvent {
@@ -101,20 +101,30 @@ impl Scheduler
         let event = event.unwrap();
 
         // updaate time
-        self.curr_time.advance_to (event.time);
+        self.curr_time.advance_to(event.time);
 
         return event.event;
     }
 
+    pub fn sim_status(&self) -> Result<(), ()> {
+        match self.sim_status {
+            SimStatus::Ok => Result::Ok(()),
+            SimStatus::Failure => Result::Err(())
+        }
+    }
+
     pub fn send_msg_delayed(&mut self, timedelta: SimTimeDelta, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
         let time = self.curr_time + timedelta;
-        let event = ScheduledEvent { time, event: EventType::MsgSendEvent(
-            MessageSendEvent { sender, channel, message }
-        )};
+        let event = ScheduledEvent {
+            time,
+            event: EventType::MsgSendEvent(
+                MessageSendEvent { sender, channel, message }
+            ),
+        };
         self.events.push(event);
     }
 
-    pub fn send_msg(&mut self, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>){
+    pub fn send_msg(&mut self, sender: ComponentId, channel: ChannelId, message: Box<dyn Any>) {
         self.send_msg_delayed(NO_DELTA, sender, channel, message);
     }
 

@@ -45,7 +45,6 @@ impl std::ops::Sub<SimTime> for SimTime {
     }
 }
 
-
 impl SimTime {
     pub(super) fn advance_to(&mut self, new_time: SimTime) {
         assert!(self.time <= new_time.time, "time mismatch: {:?} {:?}", self, new_time);
