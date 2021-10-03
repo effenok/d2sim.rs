@@ -1,6 +1,5 @@
-use d2simrs::keys::{ChannelId, ComponentId};
+use d2simrs::keys::ChannelId;
 use d2simrs::util::internalref::InternalRef;
-use std::collections::HashMap;
 use std::fmt;
 
 use crate::layer3::Layer3;
@@ -42,9 +41,11 @@ impl Layer2 {
 
     pub fn start(&mut self) {
         self.control_plane.start();
+
     }
 
     pub fn bring_up_interfaces(&mut self) {
+        eprintln!("self.interfaces = {:?}", self.interfaces);
         for if_ in &mut self.interfaces {
             if_.bring_up();
             self.layer3.on_interface_up(if_.interface_id);

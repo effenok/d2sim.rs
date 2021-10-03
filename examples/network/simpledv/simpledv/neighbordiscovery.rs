@@ -11,36 +11,44 @@ use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
 use crate::types::InterfaceId;
 
 impl SimpleDiv {
+
     pub fn add_interface(&mut self, interface_id: InterfaceId) {
         let interface_type = if self.config.has_interface(interface_id)
-        { InterfaceType::EndSystem } else { InterfaceType::EIGRP };
+        { InterfaceType::EndSystem } else { InterfaceType::SimpleDV };
 
         self.neighbor_table.add_entry_for_interface(self.router_id, interface_id, interface_type);
     }
 
-    pub fn on_interface_up(&mut self, interface_id: InterfaceId) {
+    pub fn on_simpledv_interface_up(&mut self, interface_id: InterfaceId) {
         let mut entry = &mut self.neighbor_table[interface_id];
-        entry.is_up = true;
         let if_id = entry.interface_id;
-
-        if !entry.is_eigrp_interface() {
-            println!("\tskipping interface {:?}, interface is not EIGRP", if_id);
-            return;
-        }
 
         println!("\tstarting HELLOs on interface {:?}", if_id);
 
         // send hello
-        let hello = Box::new(SimpleDVPacket::new_hello(entry.my_addr));
+        let hello = Box::new(SimpleDVPacket::new_hello(&entry.my_addr));
         self.wrap_and_send_packet(if_id, hello);
 
 
         // start hello timer
         let hello_timer = InternalEvent::new_hello_timer(if_id);
-        self.sim.timer(HELLO_INTERVAL, hello_timer);
+        // TODO:
+        // self.sim.timer(HELLO_INTERVAL, hello_timer);
     }
 
     pub(super) fn receive_hello(&mut self, if_id: InterfaceId, neighbor_addr: InterfaceAddress) {
+        if !self.neighbor_table[if_id].is_simpledv_interface() {
+            // here the router should ignore the hello,
+            // actually I have no idea what to do here
+            // however for the simulation we will raise an error
+            // and abort simulation
+            eprintln!("\t[error!] received hello from a peer that is not eirgp neighbor");
+            eprintln!("\tneighbor entry = {:?}", self.neighbor_table[if_id]);
+            self.sim.stop_simulation();
+            return;
+        }
+
+
         let other_peer = &self.neighbor_table[if_id].other_addr;
 
         match other_peer {
@@ -53,9 +61,10 @@ impl SimpleDiv {
 
                 // start hold timer
                 let hold_timer = InternalEvent::new_hold_timer(if_id);
-                self.sim.timer(HOLD_TIME, hold_timer);
+                // TODO:
+                // self.sim.timer(HOLD_TIME, hold_timer);
 
-                //todo!(react to neighbor up);
+                self.on_new_neighbor(if_id);
             }
             Some(addr) => {
                 if neighbor_addr != *addr {
@@ -73,7 +82,7 @@ impl SimpleDiv {
         println!("\t hello timer for interface {:?}", if_id);
         let mut neighbor = &mut self.neighbor_table[if_id];
 
-        let hello = Box::new(SimpleDVPacket::new_hello(neighbor.my_addr));
+        let hello = Box::new(SimpleDVPacket::new_hello(&neighbor.my_addr));
         self.wrap_and_send_packet(if_id, hello);
 
         // 3. start another timer

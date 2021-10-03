@@ -38,7 +38,7 @@ fn main() {
     component_builder.set_next_component(ComponentType::Router);
 
     // create nodes
-    for _ in 0..NUM_NODES {
+    for _ in 1..NUM_NODES {
         let node = simulation.add_component(&mut component_builder);
         nodes.push(node);
     }
@@ -54,7 +54,7 @@ fn main() {
     r4 -- r6
      */
 
-    // simulation.add_channel(&mut channel_builder, nodes[0], nodes[1]);
+    simulation.add_channel(&mut channel_builder, nodes[0], nodes[1]);
     simulation.add_channel(&mut channel_builder, nodes[1], nodes[2]);
     simulation.add_channel(&mut channel_builder, nodes[1], nodes[3]);
     simulation.add_channel(&mut channel_builder, nodes[2], nodes[3]);
@@ -67,7 +67,16 @@ fn main() {
 
     const DUR_1MIN: SimTimeDelta = SimTimeDelta::from(Duration::from_secs(60));
 
-    simulation.run_until(SimTime::default() + DUR_1MIN);
+    let sim_result = simulation.run_until(SimTime::default() + DUR_1MIN);
 
     simulation.call_terminate();
+
+    match sim_result {
+        Result::Ok(_) => {
+            println!("Simulation completed successfully");
+        },
+        Result::Err(_) => {
+            eprintln!("Simulation was aborted due to error");
+        }
+    }
 }

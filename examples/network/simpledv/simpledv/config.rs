@@ -45,5 +45,14 @@ impl Config {
 
         self.interfaces.len() != 0 && self.interfaces[0].if_id == if_id
     }
+
+    pub fn get_config(&self, if_id: InterfaceId) -> &InterfaceConfig {
+        assert!(self.interfaces.len() <= 1, "config with more than one interface is not implemented");
+
+        assert!(self.interfaces.len() == 1);
+        assert!(self.interfaces[0].if_id == if_id);
+
+        &self.interfaces[0]
+    }
 }
 

@@ -1,7 +1,9 @@
 use d2simrs::simtime::SimTime;
+use std::fmt;
 // use rand::seq::index::IndexVec;
 use std::ops::Index;
 use std::ops::IndexMut;
+use std::slice::Iter;
 
 use crate::router::RouterId;
 use crate::simpledv::addr::InterfaceAddress;
@@ -48,8 +50,12 @@ impl NeighborTableEntry {
         self.my_addr
     }
 
-    pub fn is_eigrp_interface(&self) -> bool {
+    pub fn is_simpledv_interface(&self) -> bool {
         self.interface_type == InterfaceType::EIGRP
+    }
+
+    pub fn is_active_simpledv_interface(&self) -> bool {
+        self.interface_type == InterfaceType::EIGRP && self.other_addr.is_some() && self.is_up
     }
 }
 
@@ -98,5 +104,36 @@ impl NeighborTable {
 
     pub fn len(&self) -> usize {
         self.table.len()
+    }
+
+    pub fn iter(&self) -> Iter<NeighborTableEntry> {
+        return self.table.iter();
+    }
+}
+
+// todo: https://stackoverflow.com/questions/30218886/how-to-implement-iterator-and-intoiterator-for-a-simple-struct
+
+impl fmt::Display for NeighborTable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\tNeighbor Table:\n");
+        write!(f, "\t\t\t\t\ttype \t is_up \t my_addr \t\t other_addr \tlast hello\n");
+        for entry in &self.table {
+            write!(f, "\t\t{:?} => ", entry.interface_id);
+            write!(f, "\t{:?}", entry.interface_type);
+            write!(f, "\t{}", entry.is_up);
+            write!(f, "\t{:?}", entry.my_addr);
+            match entry.other_addr {
+                Some(addr) => {
+                    write!(f, "\t{:?}", addr);
+                    write!(f, "\t{}ms", entry.last_hello_received.as_millis());
+                }
+                None => {
+                    write!(f, "\t no neighbor known");
+                }
+            }
+            write!(f, "\n");
+        }
+
+        write!(f, "")
     }
 }

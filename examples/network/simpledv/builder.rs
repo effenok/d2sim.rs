@@ -1,6 +1,5 @@
 use d2simrs::component::{Component, ComponentBuilder};
 use d2simrs::dummycomponent::DummyComponentBuilder;
-use d2simrs::environment::Environment;
 use d2simrs::keys::ComponentId;
 
 use crate::router::RouterBuilder;

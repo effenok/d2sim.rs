@@ -1,7 +1,5 @@
 use d2simrs::component::{ChannelLabel, Component, ComponentBuilder};
-use d2simrs::environment::Environment;
 use d2simrs::keys::{ChannelId, ComponentId};
-use d2simrs::scheduler::Scheduler;
 use d2simrs::simtime::{NO_DELTA, SimTimeDelta};
 use d2simrs::simvars::{sim_sched, sim_time};
 use d2simrs::util::uid::UniqueId;
@@ -75,6 +73,10 @@ impl SimHelper {
     pub fn timer(&self, timeout: SimTimeDelta, timer: Box<InternalEvent>) {
         sim_sched().sched_self_event1(timeout, self.sim_id, timer);
     }
+
+    pub fn stop_simulation(&self) {
+        sim_sched().sim_error();
+    }
 }
 
 struct Router {
@@ -106,9 +108,6 @@ impl Component for Router {
 
         match *event {
             InternalEvent::RouterStartEvent => {
-                println! {"[time {}ms] starting component {:?}",
-                          sim_sched().get_curr_time().as_millis(), self.sim_id()};
-
                 self.layer2.start();
                 self.layer3.start();
 
@@ -126,16 +125,12 @@ impl Component for Router {
     }
 
     fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>) {
-        println! {"[time {}ms] message event at component {:?}",
-                  sim_sched().get_curr_time().as_millis(), self.sim_id()};
-
         let if_id = self.channel_map.get(&incoming_channel).unwrap();
         let packet = msg.downcast::<Packet>().unwrap();
         self.layer2.receive_packet(*if_id, packet);
     }
 
     fn terminate(&mut self) {
-        println!("terminating router {:?}", self.sim_id());
         self.layer2.terminate();
         self.layer3.terminate();
     }

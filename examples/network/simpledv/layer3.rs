@@ -1,10 +1,9 @@
-use d2simrs::keys::ComponentId;
 use d2simrs::util::internalref::InternalRef;
 use std::any::Any;
 
 use crate::layer2::Layer2;
 use crate::packet::Packet;
-use crate::router::{InternalEvent, RouterId, SimHelper};
+use crate::router::{RouterId, SimHelper};
 use crate::simpledv::SimpleDiv;
 use crate::types::InterfaceId;
 
