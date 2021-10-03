@@ -1,5 +1,6 @@
+use d2simrs::basicnet::types::InterfaceId;
+
 pub use crate::simpledv::addr::HostAddr;
-use crate::types::InterfaceId;
 
 // normally we need to configure each router interface to use EIGRP
 // however we will skip this for simplicity and run EIGRP on each interface

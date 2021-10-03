@@ -9,12 +9,10 @@ use crate::builder::{ComponentType, NetworkComponentBuilder};
 
 mod simpledv;
 
-mod types;
-mod layer2;
 mod layer3;
-mod packet;
 mod router;
 mod builder;
+mod types;
 
 fn main() {
     println!("Simple Distance-Vector Algorithm");

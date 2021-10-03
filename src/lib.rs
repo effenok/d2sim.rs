@@ -1,3 +1,6 @@
+// TODO: public use
+// see https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html
+
 pub mod environment;
 pub mod component;
 pub mod dummycomponent;
@@ -15,7 +18,7 @@ pub mod synch;
 
 pub mod topo;
 
-mod basicnet;
+pub mod basicnet;
 
 
 

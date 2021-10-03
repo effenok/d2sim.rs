@@ -1,17 +1,17 @@
+use d2simrs::basicnet::{Packet, SimBase};
+use d2simrs::basicnet::layertraits::ControlPlane;
+use d2simrs::basicnet::types::{InterfaceId, RouterId};
 use d2simrs::simvars::sim_time;
 use d2simrs::util::internalref::InternalRef;
 use std::any::Any;
 
-use crate::layer2::{NextHeader2, P2PPacket};
 use crate::layer3::Layer3;
-use crate::packet::Packet;
-use crate::router::{RouterId, SimHelper};
 use crate::simpledv::config::Config;
 use crate::simpledv::neighbortable::NeighborTable;
 use crate::simpledv::packets::{SimpleDVPacket, SimpleDVPacketType};
 use crate::simpledv::routingtable::RoutingTable;
 use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
-use crate::types::InterfaceId;
+use crate::types::{L2NextHeader, P2PPacket};
 
 pub mod addr;
 mod constants;
@@ -31,11 +31,11 @@ pub struct SimpleDiv {
     routing_table: RoutingTable,
 
     pub(super) layer3: InternalRef<Layer3>,
-    pub(super) sim: InternalRef<SimHelper>,
+    pub(super) sim: InternalRef<SimBase>,
 }
 
-impl SimpleDiv {
-    pub fn new(router_id: RouterId) -> Self {
+impl ControlPlane for SimpleDiv {
+    fn new(router_id: RouterId) -> Self {
         SimpleDiv {
             router_id,
             config: Config::new(),
@@ -46,12 +46,16 @@ impl SimpleDiv {
         }
     }
 
-    pub fn start(&mut self) {
+    fn add_interface(&mut self, interface_id: InterfaceId) {
+        SimpleDiv::add_interface(self, interface_id);
+    }
+
+    fn start(&mut self) {
         println!("[time {}ms][router {}] starting SimpleDV on router", sim_time().as_millis(), self.router_id);
         self.set_num_interfaces(self.neighbor_table.len());
     }
 
-    pub fn on_interface_up(&mut self, interface_id: InterfaceId) {
+    fn on_interface_up(&mut self, interface_id: InterfaceId) {
         let mut entry = &mut self.neighbor_table[interface_id];
         entry.is_up = true;
 
@@ -62,7 +66,7 @@ impl SimpleDiv {
         }
     }
 
-    pub fn receive_packet(&mut self, if_id: InterfaceId, packet: Box<Packet>) {
+    fn receive_packet(&mut self, if_id: InterfaceId, packet: Box<Packet>) {
         let packet = packet.unwrap::<SimpleDVPacket>(0);
         println!("[time {}ms][router {}] received packet {:?}", sim_time().as_millis(), self.router_id, packet);
 
@@ -76,7 +80,7 @@ impl SimpleDiv {
         }
     }
 
-    pub fn timeout(&mut self, ev: Box<dyn Any>) {
+    fn on_timeout(&mut self, ev: Box<dyn Any>) {
         if ev.is::<HelloTimer>() {
             let hello_timer = ev.downcast::<HelloTimer>().unwrap();
             self.timeout_hello(hello_timer);
@@ -89,7 +93,7 @@ impl SimpleDiv {
         }
     }
 
-    pub fn terminate(&mut self) {
+    fn terminate(&mut self) {
         println!("[router {}] terminating", self.router_id);
         println!("{}", self.neighbor_table);
         println!("{}", self.routing_table);
@@ -101,10 +105,15 @@ impl SimpleDiv {
 }
 
 impl SimpleDiv {
+    pub fn set_refs(&mut self, l3: *mut Layer3, sim: &mut SimBase) {
+        self.layer3.set_ptr(l3);
+        self.sim.set(sim);
+    }
+
     fn wrap_and_send_packet(&self, if_: InterfaceId, dv_packet: Box<SimpleDVPacket>) {
         println!("\tsending packet {:?} to neighbor {:?}", dv_packet, if_);
         static L2_HEADER: P2PPacket = P2PPacket {
-            next_header: NextHeader2::Layer3
+            next_header: L2NextHeader::Layer3
         };
 
         let mut packet = Packet::create_and_wrap(dv_packet);

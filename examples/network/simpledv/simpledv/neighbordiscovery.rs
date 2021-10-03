@@ -1,3 +1,4 @@
+use d2simrs::basicnet::types::InterfaceId;
 use d2simrs::simtime::SimTime;
 use d2simrs::simvars::sim_time;
 
@@ -8,7 +9,6 @@ use crate::simpledv::constants::{HELLO_INTERVAL, HOLD_TIME};
 use crate::simpledv::neighbortable::InterfaceType;
 use crate::simpledv::packets::SimpleDVPacket;
 use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
-use crate::types::InterfaceId;
 
 impl SimpleDiv {
 
@@ -20,7 +20,7 @@ impl SimpleDiv {
     }
 
     pub fn on_simpledv_interface_up(&mut self, interface_id: InterfaceId) {
-        let mut entry = &mut self.neighbor_table[interface_id];
+        let entry = &mut self.neighbor_table[interface_id];
         let if_id = entry.interface_id;
 
         println!("\tstarting HELLOs on interface {:?}", if_id);
@@ -31,8 +31,8 @@ impl SimpleDiv {
 
 
         // start hello timer
-        let hello_timer = InternalEvent::new_hello_timer(if_id);
         // TODO:
+        // let hello_timer = InternalEvent::new_hello_timer(if_id);
         // self.sim.timer(HELLO_INTERVAL, hello_timer);
     }
 
@@ -60,8 +60,8 @@ impl SimpleDiv {
                 println!("\tupdated neighbor entry to = {:?}", self.neighbor_table[if_id]);
 
                 // start hold timer
-                let hold_timer = InternalEvent::new_hold_timer(if_id);
                 // TODO:
+                // let hold_timer = InternalEvent::new_hold_timer(if_id);
                 // self.sim.timer(HOLD_TIME, hold_timer);
 
                 self.on_new_neighbor(if_id);
@@ -80,7 +80,7 @@ impl SimpleDiv {
     pub(super) fn timeout_hello(&mut self, timer: Box<HelloTimer>) {
         let if_id = timer.interface_id;
         println!("\t hello timer for interface {:?}", if_id);
-        let mut neighbor = &mut self.neighbor_table[if_id];
+        let neighbor = &mut self.neighbor_table[if_id];
 
         let hello = Box::new(SimpleDVPacket::new_hello(&neighbor.my_addr));
         self.wrap_and_send_packet(if_id, hello);

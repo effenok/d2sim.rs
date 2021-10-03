@@ -1,28 +1,30 @@
-#[derive(PartialEq, Eq, Copy, Clone, Hash)]
-pub struct InterfaceId {
-    idx: usize,
+use d2simrs::basicnet::SimpleLayer2;
+use d2simrs::util::internalref::InternalRef;
+
+use crate::layer3::Layer3;
+
+pub type Layer2 = SimpleLayer2<Layer3>;
+pub type Layer2Ref = InternalRef<Layer2>;
+
+// pub type Layer3 = DummyLayer3<SimpleDiv, SimpleLayer2<Layer3>>;
+// pub type Layer3Ref = InternalRef<Layer3>;
+
+#[derive(Debug, Copy, Clone)]
+pub enum L2NextHeader {
+    Layer3
 }
 
-impl From<usize> for InterfaceId {
-    fn from(idx: usize) -> Self {
-        InterfaceId { idx }
-    }
+#[derive(Debug, Copy, Clone)]
+pub struct P2PPacket {
+    pub next_header: L2NextHeader,
 }
 
-impl PartialEq<usize> for InterfaceId {
-    fn eq(&self, other: &usize) -> bool {
-        self.idx == *other
-    }
+#[derive(Debug)]
+pub enum NextHeader3 {
+    SimpleDiv
 }
 
-impl InterfaceId {
-    pub fn as_idx(&self) -> usize {
-        self.idx
-    }
-}
-
-impl std::fmt::Debug for InterfaceId {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "if_{}", self.idx)
-    }
+#[derive(Debug)]
+pub struct Layer3Packet {
+    next_header: NextHeader3,
 }

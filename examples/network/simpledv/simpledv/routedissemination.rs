@@ -1,6 +1,7 @@
+use d2simrs::basicnet::types::InterfaceId;
+
 use crate::simpledv::packets::{Route, SimpleDVPacket};
 use crate::simpledv::SimpleDiv;
-use crate::types::InterfaceId;
 
 impl SimpleDiv {
     pub(super) fn set_num_interfaces(&mut self, num_interfaces: usize) {

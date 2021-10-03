@@ -1,9 +1,9 @@
+use d2simrs::basicnet::types::InterfaceId;
 use std::collections::HashMap;
 use std::fmt;
 
 use crate::simpledv::addr::HostAddr;
 use crate::simpledv::metric::Metric;
-use crate::types::InterfaceId;
 
 #[derive(Debug)]
 pub struct RoutingTableEntry {
@@ -22,6 +22,7 @@ pub struct RoutingTable {
 impl RoutingTable {}
 
 impl RoutingTableEntry {
+
     pub fn my_distance(&self) -> &Metric {
         &self.my_distance
     }
@@ -66,7 +67,7 @@ impl RoutingTable {
     }
 
     pub fn update_route(&mut self, nb_interface: InterfaceId, adv_addr: HostAddr, nb_metric: Metric) -> Option<Metric> {
-        let mut entry1 = self.storage.get_mut(&adv_addr);
+        let entry1 = self.storage.get_mut(&adv_addr);
 
         match entry1 {
             None => {
@@ -118,23 +119,23 @@ impl RoutingTable {
 
 impl fmt::Display for RoutingTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\tRouting Table:\n");
-        write!(f, "\t\t\t\t\t");
+        write!(f, "\tRouting Table:\n")?;
+        write!(f, "\t\t\t\t\t")?;
         for idx in 0..self.num_interfaces {
-            write!(f, "\tif_{}", idx);
+            write!(f, "\tif_{}", idx)?;
         }
-        write!(f, "\tmy distance/over");
-        write!(f, "\n");
+        write!(f, "\tmy distance/over")?;
+        write!(f, "\n")?;
         for (addr, entry) in &self.storage {
-            write!(f, "\t\t{} => ", addr);
+            write!(f, "\t\t{} => ", addr)?;
             for (if_id, metric) in entry.distances.iter().enumerate() {
                 if if_id == entry.preferred_neighbor.as_idx() {
-                    write!(f, "\t\t{}*", metric);
+                    write!(f, "\t\t{}*", metric)?;
                 } else {
-                    write!(f, "\t\t{}", metric);
+                    write!(f, "\t\t{}", metric)?;
                 }
             }
-            write!(f, "\t\t{}/{:?}", entry.my_distance, entry.preferred_neighbor);
+            write!(f, "\t\t{}/{:?}", entry.my_distance, entry.preferred_neighbor)?;
         }
         write!(f, "\n")
     }

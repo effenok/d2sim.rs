@@ -1,3 +1,4 @@
+use d2simrs::basicnet::types::{InterfaceId, RouterId};
 use d2simrs::simtime::SimTime;
 use std::fmt;
 // use rand::seq::index::IndexVec;
@@ -5,14 +6,12 @@ use std::ops::Index;
 use std::ops::IndexMut;
 use std::slice::Iter;
 
-use crate::router::RouterId;
 use crate::simpledv::addr::InterfaceAddress;
-use crate::types::InterfaceId;
 
 #[derive(Debug, PartialEq)]
 pub enum InterfaceType {
     EndSystem,
-    EIGRP,
+    SimpleDV,
 }
 
 #[derive(Debug)]
@@ -51,11 +50,11 @@ impl NeighborTableEntry {
     }
 
     pub fn is_simpledv_interface(&self) -> bool {
-        self.interface_type == InterfaceType::EIGRP
+        self.interface_type == InterfaceType::SimpleDV
     }
 
     pub fn is_active_simpledv_interface(&self) -> bool {
-        self.interface_type == InterfaceType::EIGRP && self.other_addr.is_some() && self.is_up
+        self.interface_type == InterfaceType::SimpleDV && self.other_addr.is_some() && self.is_up
     }
 }
 
@@ -115,23 +114,23 @@ impl NeighborTable {
 
 impl fmt::Display for NeighborTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\tNeighbor Table:\n");
-        write!(f, "\t\t\t\t\ttype \t is_up \t my_addr \t\t other_addr \tlast hello\n");
+        write!(f, "\tNeighbor Table:\n")?;
+        write!(f, "\t\t\t\t\ttype \t is_up \t my_addr \t\t other_addr \tlast hello\n")?;
         for entry in &self.table {
-            write!(f, "\t\t{:?} => ", entry.interface_id);
-            write!(f, "\t{:?}", entry.interface_type);
-            write!(f, "\t{}", entry.is_up);
-            write!(f, "\t{:?}", entry.my_addr);
+            write!(f, "\t\t{:?} => ", entry.interface_id)?;
+            write!(f, "\t{:?}", entry.interface_type)?;
+            write!(f, "\t{}", entry.is_up)?;
+            write!(f, "\t{:?}", entry.my_addr)?;
             match entry.other_addr {
                 Some(addr) => {
-                    write!(f, "\t{:?}", addr);
-                    write!(f, "\t{}ms", entry.last_hello_received.as_millis());
+                    write!(f, "\t{:?}", addr)?;
+                    write!(f, "\t{}ms", entry.last_hello_received.as_millis())?;
                 }
                 None => {
-                    write!(f, "\t no neighbor known");
+                    write!(f, "\t no neighbor known")?;
                 }
             }
-            write!(f, "\n");
+            write!(f, "\n")?;
         }
 
         write!(f, "")

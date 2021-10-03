@@ -1,5 +1,6 @@
+use d2simrs::basicnet::types::InterfaceId;
+
 use crate::router::InternalEvent;
-use crate::types::InterfaceId;
 
 #[derive(Debug)]
 pub(super) struct HelloTimer {

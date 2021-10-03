@@ -1,18 +1,16 @@
+use d2simrs::basicnet::{SimBase, SimpleLayer2};
+use d2simrs::basicnet::packet::Packet;
+use d2simrs::basicnet::types::InterfaceId;
 use d2simrs::component::{ChannelLabel, Component, ComponentBuilder};
 use d2simrs::keys::{ChannelId, ComponentId};
-use d2simrs::simtime::{NO_DELTA, SimTimeDelta};
+use d2simrs::simtime::NO_DELTA;
 use d2simrs::simvars::{sim_sched, sim_time};
 use d2simrs::util::uid::UniqueId;
 use std::any::Any;
 use std::collections::HashMap;
 
-use crate::layer2::Layer2;
 use crate::layer3::Layer3;
-use crate::packet::Packet;
 use crate::simpledv::config::HostAddr;
-use crate::types::InterfaceId;
-
-pub type RouterId = UniqueId;
 
 #[derive(Default)]
 pub struct RouterBuilder {
@@ -24,15 +22,20 @@ impl ComponentBuilder for RouterBuilder {
         self.counter += 1;
 
         let mut router = Box::new(Router {
-            sim_helper: SimHelper { sim_id: id },
+            sim_helper: SimBase::new(id),
             channel_map: HashMap::new(),
-            layer2: Layer2::new(),
+            layer2: SimpleLayer2::new(),
             layer3: Layer3::new(UniqueId(self.counter)),
         });
 
-        router.layer3.set_ptrs(&mut router.layer2, &mut router.sim_helper);
+
+        let ptr = &mut router.layer3 as *mut Layer3;
+        let sim = &mut router.sim_helper;
+
+        router.layer3.control_plane.set_refs(ptr, sim);
+        router.layer3.set_refs(&mut router.layer2, sim);
         router.layer2.layer3.set(&mut router.layer3);
-        router.layer2.sim.set(&mut router.sim_helper);
+        router.layer2.sim.set(sim);
 
         if self.counter == 1 {
             println!("adding config to router 1");
@@ -52,7 +55,6 @@ impl ComponentBuilder for RouterBuilder {
 pub enum InternalEvent {
     RouterStartEvent,
     L3TimerEvent(Box<dyn Any>),
-    // L3TimerEvent((usize, Box<dyn Any>))
 }
 
 impl InternalEvent {
@@ -61,37 +63,19 @@ impl InternalEvent {
     }
 }
 
-pub struct SimHelper {
-    sim_id: ComponentId,
-}
-
-impl SimHelper {
-    pub fn send_msg_on_channel(&self, channel: ChannelId, msg: Box<dyn Any>) {
-        sim_sched().send_msg(self.sim_id, channel, msg);
-    }
-
-    pub fn timer(&self, timeout: SimTimeDelta, timer: Box<InternalEvent>) {
-        sim_sched().sched_self_event1(timeout, self.sim_id, timer);
-    }
-
-    pub fn stop_simulation(&self) {
-        sim_sched().sim_error();
-    }
-}
-
 struct Router {
-    sim_helper: SimHelper,
+    sim_helper: SimBase,
     channel_map: HashMap<ChannelId, InterfaceId>,
-    layer2: Layer2,
+    layer2: SimpleLayer2<Layer3>,
     layer3: Layer3,
 }
 
 impl Component for Router {
     fn sim_id(&self) -> ComponentId {
-        self.sim_helper.sim_id
+        self.sim_helper.sim_id()
     }
 
-    fn add_channel(&mut self, channel_id: ChannelId, label: ChannelLabel) {
+    fn add_channel(&mut self, channel_id: ChannelId, _label: ChannelLabel) {
         let if_id = self.layer2.create_p2p_interface(channel_id);
         self.layer3.add_interface(if_id);
         self.channel_map.insert(channel_id, if_id);
@@ -106,6 +90,8 @@ impl Component for Router {
     fn process_event(&mut self, sender: ComponentId, event: Box<dyn Any>) {
         let event = event.downcast::<InternalEvent>().unwrap();
 
+        assert_eq!(sender, self.sim_id());
+
         match *event {
             InternalEvent::RouterStartEvent => {
                 self.layer2.start();
@@ -117,9 +103,6 @@ impl Component for Router {
                 println! {"[time {}ms] timeout at component {:?}",
                           sim_time().as_millis(), self.sim_id()};
                 self.layer3.timeout(l3_timer)
-            }
-            _ => {
-                todo!();
             }
         }
     }
@@ -135,4 +118,3 @@ impl Component for Router {
         self.layer3.terminate();
     }
 }
-

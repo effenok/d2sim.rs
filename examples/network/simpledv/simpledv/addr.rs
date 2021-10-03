@@ -1,9 +1,7 @@
+use d2simrs::basicnet::types::{InterfaceId, RouterId};
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
-
-use crate::router::RouterId;
-use crate::types::InterfaceId;
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct InterfaceAddress {
