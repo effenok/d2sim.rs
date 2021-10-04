@@ -1,7 +1,7 @@
-use rand::Rng;
-
 use std::collections::HashSet;
 use std::fmt;
+
+use rand::Rng;
 
 //TODO: generic UID?
 
@@ -75,7 +75,7 @@ impl UIdGenRandom {
 
 #[cfg(test)]
 mod test {
-    use crate::uid::UniqueId;
+    use super::*;
 
     #[test]
     fn test_sequential1() {
