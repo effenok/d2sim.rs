@@ -1,10 +1,11 @@
-use d2simrs::basicnet::types::{InterfaceId, RouterId};
-use d2simrs::simtime::SimTime;
 use std::fmt;
 // use rand::seq::index::IndexVec;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::slice::Iter;
+
+use d2simrs::basicnet::types::{InterfaceId, RouterId};
+use d2simrs::simtime::SimTime;
 
 use crate::simpledv::addr::InterfaceAddress;
 
@@ -33,7 +34,7 @@ impl NeighborTableEntry {
             my_addr: InterfaceAddress { router_id, interface_id },
             other_addr: None,
             last_hello_received: SimTime::default(),
-            is_up: false, // TODO: initially false, but send up from layer 2 on start
+            is_up: false,
         }
     }
 

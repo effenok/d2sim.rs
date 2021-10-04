@@ -10,8 +10,9 @@ use crate::simpledv::neighbortable::InterfaceType;
 use crate::simpledv::packets::SimpleDVPacket;
 use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
 
-impl SimpleDiv {
+const DO_PERIODIC_HELLOS: bool = false;
 
+impl SimpleDiv {
     pub fn add_interface(&mut self, interface_id: InterfaceId) {
         let interface_type = if self.config.has_interface(interface_id)
         { InterfaceType::EndSystem } else { InterfaceType::SimpleDV };
@@ -31,9 +32,10 @@ impl SimpleDiv {
 
 
         // start hello timer
-        // TODO:
-        // let hello_timer = InternalEvent::new_hello_timer(if_id);
-        // self.sim.timer(HELLO_INTERVAL, hello_timer);
+        if DO_PERIODIC_HELLOS {
+            let hello_timer = InternalEvent::new_hello_timer(if_id);
+            self.sim.timer(HELLO_INTERVAL, hello_timer);
+        }
     }
 
     pub(super) fn receive_hello(&mut self, if_id: InterfaceId, neighbor_addr: InterfaceAddress) {
@@ -60,9 +62,10 @@ impl SimpleDiv {
                 println!("\tupdated neighbor entry to = {:?}", self.neighbor_table[if_id]);
 
                 // start hold timer
-                // TODO:
-                // let hold_timer = InternalEvent::new_hold_timer(if_id);
-                // self.sim.timer(HOLD_TIME, hold_timer);
+                if DO_PERIODIC_HELLOS {
+                    let hold_timer = InternalEvent::new_hold_timer(if_id);
+                    self.sim.timer(HOLD_TIME, hold_timer);
+                }
 
                 self.on_new_neighbor(if_id);
             }

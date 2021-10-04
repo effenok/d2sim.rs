@@ -1,17 +1,18 @@
+use std::any::Any;
+
 use d2simrs::basicnet::{Packet, SimBase};
-use d2simrs::basicnet::layertraits::ControlPlane;
+use d2simrs::basicnet::nettraits::ControlPlane;
 use d2simrs::basicnet::types::{InterfaceId, RouterId};
 use d2simrs::simvars::sim_time;
 use d2simrs::util::internalref::InternalRef;
-use std::any::Any;
 
-use crate::layer3::Layer3;
+// use crate::layer3::Layer3;
 use crate::simpledv::config::Config;
 use crate::simpledv::neighbortable::NeighborTable;
 use crate::simpledv::packets::{SimpleDVPacket, SimpleDVPacketType};
 use crate::simpledv::routingtable::RoutingTable;
 use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
-use crate::types::{L2NextHeader, P2PPacket};
+use crate::types::{L2NextHeader, Layer3, P2PPacket};
 
 pub mod addr;
 mod constants;
@@ -66,8 +67,8 @@ impl ControlPlane for SimpleDiv {
         }
     }
 
-    fn receive_packet(&mut self, if_id: InterfaceId, packet: Box<Packet>) {
-        let packet = packet.unwrap::<SimpleDVPacket>(0);
+    fn receive_packet(&mut self, if_id: InterfaceId, packet: &Packet) {
+        let packet = packet.unwrap_next::<SimpleDVPacket>().unwrap();
         println!("[time {}ms][router {}] received packet {:?}", sim_time().as_millis(), self.router_id, packet);
 
         match &packet.content {

@@ -1,9 +1,19 @@
 use std::fmt;
 
 use crate::basicnet::{InterfaceId, Packet, SimBase};
-use crate::basicnet::layertraits::Layer;
+use crate::basicnet::nettraits::{BottomLayer, InterfaceEventListener};
 use crate::keys::ChannelId;
 use crate::util::internalref::InternalRef;
+
+#[derive(Debug, Copy, Clone)]
+pub enum SimpleL2NextHeader {
+    Layer3
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct P2PPacket<L2NextHeaderT> {
+    pub next_header: L2NextHeaderT,
+}
 
 /// simple layer 2 for only point-to-point links
 /// each channel is associated with an interface
@@ -12,27 +22,48 @@ use crate::util::internalref::InternalRef;
 ///
 /// packets have only one field - next header
 /// there are no addresses for point-to-point links
-pub struct SimpleLayer2<Layer3T>
-    where Layer3T: Layer
+pub struct SimpleLayer2<NextHeaderT>
+    where NextHeaderT: 'static + std::fmt::Debug + Copy
 {
     interfaces: Vec<P2PLayer2Instance>,
 
-    pub layer3: InternalRef<Layer3T>,
+    pub layer3: InternalRef<NextHeaderT>,
     pub sim: InternalRef<SimBase>,
+
+    marker: std::marker::PhantomData<NextHeaderT>,
 }
 
-impl<Layer3T: Layer> SimpleLayer2<Layer3T> {
+impl<NextHeaderT> BottomLayer for SimpleLayer2<NextHeaderT>
+    where NextHeaderT: 'static + std::fmt::Debug + Copy
+{
+    fn send_packet(&self, if_id: InterfaceId, packet: Box<Packet>) {
+        assert!(packet.is_first_of_type::<P2PPacket<NextHeaderT>>());
+
+        let if_ = &self.interfaces[if_id.as_idx()];
+        if !if_.is_up {
+            // ignore packet
+            return;
+        }
+        let channel = if_.channel_id;
+        self.sim.send_msg_on_channel(channel, packet);
+    }
+}
+
+impl<NextHeaderT> SimpleLayer2<NextHeaderT>
+    where NextHeaderT: 'static + std::fmt::Debug + Copy
+{
     pub fn new() -> Self {
         SimpleLayer2 {
             interfaces: Vec::new(),
 
             layer3: InternalRef::new(),
             sim: InternalRef::new(),
+            marker: Default::default(),
         }
     }
 
-    pub fn set_refs(&mut self, l3: &mut Layer3T, sim: &mut SimBase) {
-        self.layer3.set(l3);
+    pub fn set_refs(&mut self, sim: &mut SimBase) {
+        // self.layer3.set(l3);
         self.sim.set(sim);
     }
 
@@ -54,33 +85,22 @@ impl<Layer3T: Layer> SimpleLayer2<Layer3T> {
         // do nothing
     }
 
-    pub fn bring_up_interfaces(&mut self) {
+    pub fn bring_up_interfaces<L3: InterfaceEventListener>(&mut self, layer3: &mut L3) {
         for if_ in &mut self.interfaces {
             if_.set_up();
-            self.layer3.on_interface_up(if_.interface_id);
+            layer3.on_interface_up(if_.interface_id);
         }
     }
 
-    pub fn send_packet(&self, if_id: InterfaceId, packet: Box<Packet>) {
-        // TODO: check that last header is layer2 header with next_header set
+    pub fn receive_packet(&mut self, if_id: InterfaceId, packet: &Packet) -> Option<NextHeaderT> {
         let if_ = &self.interfaces[if_id.as_idx()];
         if !if_.is_up {
             // ignore packet
-            return;
+            return None;
         }
-        let channel = if_.channel_id;
-        self.sim.send_msg_on_channel(channel, packet);
-    }
 
-    pub fn receive_packet(&mut self, if_id: InterfaceId, packet: Box<Packet>) {
-        // TODO: parse next header and pass next header / next header id to layer 3
-        let if_ = &self.interfaces[if_id.as_idx()];
-        if !if_.is_up {
-            // ignore packet
-            return;
-        }
-        // here i should check for the next layer header, but since there is only one
-        self.layer3.receive_packet(if_id, packet);
+        let l2header = packet.unwrap_first::<P2PPacket<NextHeaderT>>();
+        Some(l2header.next_header)
     }
 
     pub fn terminate(&mut self) {

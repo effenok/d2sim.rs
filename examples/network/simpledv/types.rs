@@ -1,30 +1,23 @@
+use d2simrs::basicnet::dummylayer3::DummyLayer3;
 use d2simrs::basicnet::SimpleLayer2;
-use d2simrs::util::internalref::InternalRef;
+use d2simrs::basicnet::simplelayer2::SimpleL2NextHeader;
 
-use crate::layer3::Layer3;
+use crate::simpledv::SimpleDiv;
 
-pub type Layer2 = SimpleLayer2<Layer3>;
-pub type Layer2Ref = InternalRef<Layer2>;
+// layer2 definitions
+pub type L2NextHeader = SimpleL2NextHeader;
+pub type P2PPacket = d2simrs::basicnet::simplelayer2::P2PPacket<L2NextHeader>;
+pub type Layer2 = SimpleLayer2<L2NextHeader>;
 
-// pub type Layer3 = DummyLayer3<SimpleDiv, SimpleLayer2<Layer3>>;
-// pub type Layer3Ref = InternalRef<Layer3>;
+// layer3 definitions
+pub type Layer3 = DummyLayer3<SimpleDiv, Layer2>;
 
-#[derive(Debug, Copy, Clone)]
-pub enum L2NextHeader {
-    Layer3
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct P2PPacket {
-    pub next_header: L2NextHeader,
-}
-
-#[derive(Debug)]
-pub enum NextHeader3 {
-    SimpleDiv
-}
-
-#[derive(Debug)]
-pub struct Layer3Packet {
-    next_header: NextHeader3,
-}
+// #[derive(Debug)]
+// pub enum NextHeader3 {
+//     SimpleDiv
+// }
+//
+// #[derive(Debug)]
+// pub struct Layer3Packet {
+//     next_header: NextHeader3,
+// }

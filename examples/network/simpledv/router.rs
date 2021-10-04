@@ -1,3 +1,6 @@
+use std::any::Any;
+use std::collections::HashMap;
+
 use d2simrs::basicnet::{SimBase, SimpleLayer2};
 use d2simrs::basicnet::packet::Packet;
 use d2simrs::basicnet::types::InterfaceId;
@@ -6,11 +9,9 @@ use d2simrs::keys::{ChannelId, ComponentId};
 use d2simrs::simtime::NO_DELTA;
 use d2simrs::simvars::{sim_sched, sim_time};
 use d2simrs::util::uid::UniqueId;
-use std::any::Any;
-use std::collections::HashMap;
 
-use crate::layer3::Layer3;
 use crate::simpledv::config::HostAddr;
+use crate::types::{L2NextHeader, Layer2, Layer3};
 
 #[derive(Default)]
 pub struct RouterBuilder {
@@ -34,8 +35,7 @@ impl ComponentBuilder for RouterBuilder {
 
         router.layer3.control_plane.set_refs(ptr, sim);
         router.layer3.set_refs(&mut router.layer2, sim);
-        router.layer2.layer3.set(&mut router.layer3);
-        router.layer2.sim.set(sim);
+        router.layer2.set_refs(sim);
 
         if self.counter == 1 {
             println!("adding config to router 1");
@@ -66,7 +66,7 @@ impl InternalEvent {
 struct Router {
     sim_helper: SimBase,
     channel_map: HashMap<ChannelId, InterfaceId>,
-    layer2: SimpleLayer2<Layer3>,
+    layer2: Layer2,
     layer3: Layer3,
 }
 
@@ -97,12 +97,12 @@ impl Component for Router {
                 self.layer2.start();
                 self.layer3.start();
 
-                self.layer2.bring_up_interfaces();
+                self.layer2.bring_up_interfaces(&mut self.layer3);
             }
             InternalEvent::L3TimerEvent(l3_timer) => {
                 println! {"[time {}ms] timeout at component {:?}",
                           sim_time().as_millis(), self.sim_id()};
-                self.layer3.timeout(l3_timer)
+                self.layer3.on_timeout(l3_timer)
             }
         }
     }
@@ -110,7 +110,15 @@ impl Component for Router {
     fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>) {
         let if_id = self.channel_map.get(&incoming_channel).unwrap();
         let packet = msg.downcast::<Packet>().unwrap();
-        self.layer2.receive_packet(*if_id, packet);
+
+        // 1. send message to layer 2
+        let next_layer = self.layer2.receive_packet(*if_id, &*packet);
+
+        // 2. send message to layer 3
+        assert!(matches!(next_layer, Some(L2NextHeader::Layer3)));
+        self.layer3.receive_packet(*if_id, &*packet);
+
+        // there are no layers on this device
     }
 
     fn terminate(&mut self) {

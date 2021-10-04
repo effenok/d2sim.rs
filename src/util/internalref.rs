@@ -20,7 +20,16 @@ impl<T> DerefMut for InternalRef<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         assert!(self.initialized, "reading uninitialized reference");
 
-        unsafe {self.ptr.as_mut().unwrap()}
+        unsafe { self.ptr.as_mut().unwrap() }
+    }
+}
+
+impl<T> Default for InternalRef<T> {
+    fn default() -> Self {
+        InternalRef {
+            ptr: std::ptr::null_mut(),
+            initialized: false,
+        }
     }
 }
 
@@ -28,7 +37,7 @@ impl<T> InternalRef<T> {
     pub fn new() -> Self {
         InternalRef {
             ptr: std::ptr::null_mut(),
-            initialized: false
+            initialized: false,
         }
     }
 

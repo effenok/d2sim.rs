@@ -1,15 +1,14 @@
+use std::time::Duration;
+
 use d2simrs::channels::delay_channel::DelayChannelBuilder;
 use d2simrs::keys::ComponentId;
 use d2simrs::sim::Simulation;
 use d2simrs::simtime::SimTime;
 use d2simrs::simtime::SimTimeDelta;
-use std::time::Duration;
 
 use crate::builder::{ComponentType, NetworkComponentBuilder};
 
 mod simpledv;
-
-mod layer3;
 mod router;
 mod builder;
 mod types;
