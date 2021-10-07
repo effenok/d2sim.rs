@@ -8,15 +8,15 @@ use crate::simvars::{SIM, sim_sched};
 
 pub type Components = Vec<Box<dyn Component>>;
 
-pub struct Simulation<CB>
-    where CB: ChannelBuilder
+pub struct Simulation<ChannelT>
+    where ChannelT: Channel
 {
     components: Components,
-    channels: Vec<CB::C>,
+    channels: Vec<ChannelT>,
     // scheduler: Scheduler,
 }
 
-impl<CB: ChannelBuilder> Default for Simulation<CB> {
+impl<ChannelT: Channel> Default for Simulation<ChannelT> {
     fn default() -> Self {
         Self {
             components: Vec::new(),
@@ -26,7 +26,7 @@ impl<CB: ChannelBuilder> Default for Simulation<CB> {
     }
 }
 
-impl<CB: ChannelBuilder> Simulation<CB> {
+impl<ChannelT: Channel> Simulation<ChannelT> {
 
     pub fn add_component(&mut self, builder: &mut dyn ComponentBuilder) -> ComponentId {
         let id = self.components.len();
@@ -36,7 +36,9 @@ impl<CB: ChannelBuilder> Simulation<CB> {
         id
     }
 
-    pub fn add_channel(&mut self, builder: &mut CB, left: ComponentId, right: ComponentId) -> ChannelId {
+    pub fn add_channel<ChannelBuilderT>(&mut self, builder: &mut ChannelBuilderT, left: ComponentId, right: ComponentId) -> ChannelId
+        where ChannelBuilderT: ChannelBuilder<C = ChannelT>
+    {
         let channel_id = self.channels.len();
         let channel_id = ChannelId::new(channel_id);
         self.channels.push(builder.build_channel(channel_id, left, right));

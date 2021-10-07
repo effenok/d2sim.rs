@@ -3,6 +3,7 @@ use crate::component::{ComponentBuilder};
 use petgraph::graph::UnGraph;
 use crate::sim::Simulation;
 use crate::channel::ChannelBuilder;
+use crate::channel::Channel;
 
 #[derive(Debug)]
 pub struct Point {
@@ -30,13 +31,15 @@ pub struct Topology {
     pub(super) g: TopoGraph,
 }
 
-impl<CB: ChannelBuilder> Simulation<CB> {
+impl<ChannelT: Channel> Simulation<ChannelT> {
 
-    pub fn build_from_topo(&mut self,
+    pub fn build_from_topo<CB>(&mut self,
                            topo: &mut Topology,
                            component_builder: &mut dyn ComponentBuilder,
                            channel_builder: &mut CB,
-    ) {
+    )
+        where CB: ChannelBuilder<C = ChannelT>
+    {
 
         let g = &mut topo.g;
 
