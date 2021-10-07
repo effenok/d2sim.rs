@@ -58,8 +58,8 @@ fn main() {
     simulation.add_channel(&mut channel_builder, nodes[0], nodes[1]);
     simulation.add_channel(&mut channel_builder, nodes[1], nodes[2]);
     simulation.add_channel(&mut channel_builder, nodes[2], nodes[3]);
-    // simulation.add_channel(&mut channel_builder, nodes[2], nodes[4]);
-    // simulation.add_channel(&mut channel_builder, nodes[3], nodes[4]);
+    simulation.add_channel(&mut channel_builder, nodes[2], nodes[4]);
+    simulation.add_channel(&mut channel_builder, nodes[3], nodes[4]);
     // simulation.add_channel(&mut channel_builder, nodes[3], nodes[5]);
     // simulation.add_channel(&mut channel_builder, nodes[3], nodes[6]);
     // simulation.add_channel(&mut channel_builder, nodes[4], nodes[7]);

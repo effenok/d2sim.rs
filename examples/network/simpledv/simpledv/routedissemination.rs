@@ -1,4 +1,5 @@
 use d2simrs::basicnet::types::InterfaceId;
+use crate::simpledv::metric::Metric;
 
 use crate::simpledv::packets::{Route, SimpleDVPacket};
 use crate::simpledv::SimpleDiv;
@@ -78,7 +79,7 @@ impl SimpleDiv {
                 println!("\tI already have a better route");
                 return;
             }
-            Some(my_new_metric) => {
+            Some((preferred_nb, my_new_metric)) => {
                 println!("\tMy route has changed, sending update on all other interfaces");
 
                 println!("{}", self.routing_table);
@@ -89,9 +90,16 @@ impl SimpleDiv {
                     }
 
                     // todo: for now send my entry, we will implement poison reverse later
+                    // poison reverse, send infinity to the preferred neighbor
+                    let upd_metric;
+                    if entry.interface_id == preferred_nb {
+                        upd_metric = Metric::INFINITY;
+                    } else {
+                        upd_metric = my_new_metric;
+                    }
 
                     let update = SimpleDVPacket::new_update(&entry.my_addr, entry.other_addr.unwrap(),
-                                                            &route.addr, my_new_metric);
+                                                            &route.addr, upd_metric);
 
                     self.wrap_and_send_packet(entry.interface_id, Box::new(update));
                 }

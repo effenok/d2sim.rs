@@ -38,25 +38,27 @@ impl RoutingTable {
         self.num_interfaces = num_interfaces;
     }
 
-    fn add_entry(&mut self, addr: HostAddr, if_id: InterfaceId, metric: Metric) {
+    fn add_entry(&mut self, addr: HostAddr, if_id: InterfaceId, metric: Metric) -> Metric {
+        let my_metric = metric + Metric::ONE_HOP;
         let mut entry = RoutingTableEntry {
             distances: vec![Metric::default(); self.num_interfaces],
             preferred_neighbor: if_id,
-            my_distance: metric + Metric::ONE_HOP,
+            my_distance: my_metric,
         };
 
         entry.distances[if_id.as_idx()] = metric;
 
         let old_entry = self.storage.insert(addr, entry);
-
         assert!(old_entry.is_none());
+
+        my_metric
     }
 
     pub fn add_local_entry(&mut self, addr: HostAddr, if_id: InterfaceId) {
         let mut entry = RoutingTableEntry {
             distances: vec![Metric::default(); self.num_interfaces],
             preferred_neighbor: if_id,
-            my_distance: Metric::new_zero(),
+            my_distance: Metric::new_zero() + Metric::ONE_HOP,
         };
 
         entry.distances[if_id.as_idx()] = Metric::new_zero();
@@ -66,13 +68,13 @@ impl RoutingTable {
         assert!(old_entry.is_none());
     }
 
-    pub fn update_route(&mut self, nb_interface: InterfaceId, adv_addr: HostAddr, nb_metric: Metric) -> Option<Metric> {
+    pub fn update_route(&mut self, nb_interface: InterfaceId, adv_addr: HostAddr, nb_metric: Metric) -> Option<(InterfaceId, Metric)> {
         let entry1 = self.storage.get_mut(&adv_addr);
 
         match entry1 {
             None => {
-                self.add_entry(adv_addr, nb_interface, nb_metric);
-                Some(nb_metric + Metric::ONE_HOP)
+                let my_metric = self.add_entry(adv_addr, nb_interface, nb_metric);
+                return Some((nb_interface, my_metric));
             }
             Some(entry) => {
                 // let old_metric = entry.distances[nb_interface.as_idx()];
@@ -87,7 +89,7 @@ impl RoutingTable {
                 if new_min_distance != entry.my_distance {
                     entry.my_distance = new_min_distance;
                     entry.preferred_neighbor = nb_interface;
-                    return Some(new_min_distance);
+                    return Some((entry.preferred_neighbor, entry.my_distance));
                 } else {
                     return None;
                 }
@@ -107,8 +109,8 @@ impl RoutingTable {
             // entry.distances.iter().min().unwrap().clone();
             let (min_if_id, new_min) = entry.distances.iter().enumerate().min_by_key(|&(_, item)| item).unwrap();
 
-            // eprintln!("if_id = {:?}", min_if_id);
-            // eprintln!("if_id = {:?}", new_min);
+            eprintln!("if_id = {:?}", min_if_id);
+            eprintln!("if_id = {:?}", new_min);
 
             if min_if_id != entry.preferred_neighbor.as_idx() {
                 entry.preferred_neighbor = InterfaceId::from(min_if_id);

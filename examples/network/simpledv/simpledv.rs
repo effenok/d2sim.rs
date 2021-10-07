@@ -25,6 +25,8 @@ mod routingtable;
 mod metric;
 mod routedissemination;
 
+pub(super) const DEBUG_PERIODIC_HELLOS: bool = false;
+
 pub struct SimpleDiv {
     router_id: RouterId,
     pub config: Config,
@@ -52,7 +54,7 @@ impl ControlPlane for SimpleDiv {
     }
 
     fn start(&mut self) {
-        println!("[time {}ms][router {}] starting SimpleDV on router", sim_time().as_millis(), self.router_id);
+        self.log_msg("starting SimpleDV on router");
         self.set_num_interfaces(self.neighbor_table.len());
     }
 
@@ -68,6 +70,7 @@ impl ControlPlane for SimpleDiv {
     }
 
     fn on_interface_down(&mut self, interface_id: InterfaceId) {
+        // TODO: logln macro
         println!("[time {}ms][router {}] interface {:?} is down", sim_time().as_millis(), self.router_id, interface_id);
         let entry = &mut self.neighbor_table[interface_id];
 
@@ -78,16 +81,16 @@ impl ControlPlane for SimpleDiv {
         }
     }
 
-    fn receive_packet(&mut self, if_id: InterfaceId, packet: &Packet) {
+    fn receive_packet(&mut self, interface: InterfaceId, packet: &Packet) {
         let packet = packet.unwrap_next::<SimpleDVPacket>().unwrap();
-        println!("[time {}ms][router {}] received packet {:?}", sim_time().as_millis(), self.router_id, packet);
+        self.log_packet_receive(packet, interface);
 
         match &packet.content {
             SimpleDVPacketType::Hello => {
-                self.receive_hello(if_id, packet.source)
+                self.receive_hello(interface, packet.source)
             }
             SimpleDVPacketType::Update(route) => {
-                self.receive_update(if_id, route);
+                self.receive_update(interface, route);
             }
         }
     }
@@ -124,8 +127,9 @@ impl SimpleDiv {
         self.sim.set(sim);
     }
 
-    fn wrap_and_send_packet(&self, if_: InterfaceId, dv_packet: Box<SimpleDVPacket>) {
-        println!("\tsending packet {:?} to neighbor {:?}", dv_packet, if_);
+    fn wrap_and_send_packet(&self, interface: InterfaceId, dv_packet: Box<SimpleDVPacket>) {
+        self.log_send_packet(&dv_packet, interface);
+
         static L2_HEADER: P2PPacket = P2PPacket {
             next_header: L2NextHeader::Layer3
         };
@@ -134,6 +138,22 @@ impl SimpleDiv {
         // todo: create next header for IP
         packet.add_packet(Box::new(L2_HEADER));
 
-        self.layer3.send_packet(if_, packet);
+        self.layer3.send_packet(interface, packet);
+    }
+
+    fn log_msg(&self, msg: &str) {
+        println!("[time {}ms][router {}] {}", sim_time().as_millis(), self.router_id, msg);
+    }
+
+    fn log_packet_receive(&self, packet: &SimpleDVPacket, interface: InterfaceId) {
+        if DEBUG_PERIODIC_HELLOS || !matches!(packet.content, SimpleDVPacketType::Hello) {
+            println!("[time {}ms][router {}] received packet {:?} from interface {:?}", sim_time().as_millis(), self.router_id, packet, interface);
+        }
+    }
+
+    fn log_send_packet(&self, packet: &SimpleDVPacket, interface: InterfaceId) {
+        if DEBUG_PERIODIC_HELLOS || !matches!(packet.content, SimpleDVPacketType::Hello) {
+            println!("\tsending packet {:?} on interface {:?}", packet, interface);
+        }
     }
 }

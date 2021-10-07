@@ -9,8 +9,7 @@ use crate::simpledv::constants::{HELLO_INTERVAL, HOLD_TIME};
 use crate::simpledv::neighbortable::InterfaceType;
 use crate::simpledv::packets::SimpleDVPacket;
 use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
-
-const DO_PERIODIC_HELLOS: bool = false;
+use crate::simpledv::DEBUG_PERIODIC_HELLOS;
 
 impl SimpleDiv {
 
@@ -33,10 +32,10 @@ impl SimpleDiv {
 
 
         // start hello timer
-        if DO_PERIODIC_HELLOS {
+        // if DEBUG_PERIODIC_HELLOS {
             let hello_timer = InternalEvent::new_hello_timer(if_id);
             self.sim.timer(HELLO_INTERVAL, hello_timer);
-        }
+        // }
     }
 
     pub(super) fn on_simpledv_interface_down(&mut self, interface_id: InterfaceId) {
@@ -73,10 +72,10 @@ impl SimpleDiv {
                 println!("\tupdated neighbor entry to = {:?}", self.neighbor_table[if_id]);
 
                 // start hold timer
-                if DO_PERIODIC_HELLOS {
+                // if DEBUG_PERIODIC_HELLOS {
                     let hold_timer = InternalEvent::new_hold_timer(if_id);
                     self.sim.timer(HOLD_TIME, hold_timer);
-                }
+                // }
 
                 self.on_new_neighbor(if_id);
             }
@@ -93,11 +92,17 @@ impl SimpleDiv {
 
     pub(super) fn timeout_hello(&mut self, timer: Box<HelloTimer>) {
         let if_id = timer.interface_id;
-        println!("\t hello timer for interface {:?}", if_id);
+
+        if DEBUG_PERIODIC_HELLOS {
+            println!("[time {}ms][router {}] hello timer for interface {:?}", sim_time().as_millis(), self.router_id, if_id);
+        }
+
         let neighbor = &mut self.neighbor_table[if_id];
 
         if !neighbor.is_up() {
-            println!("\t stopping hello, interface is down {:?}", if_id);
+            if DEBUG_PERIODIC_HELLOS {
+                println!("\t stopping hello, interface is down {:?}", if_id);
+            }
             return;
         }
 
@@ -126,7 +131,8 @@ impl SimpleDiv {
             let hold_timer = InternalEvent::from_hold_timer(timer);
             self.sim.timer(delta, hold_timer);
         } else {
-            println!("\tneighbor timeout {:?} on interface {:?}", neighbor.other_addr, timer.interface_id);
+            println!("[time {}ms][router {}] neighbor timeout {:?} on interface {:?}",
+                     sim_time().as_millis(), self.router_id,  neighbor.other_addr, timer.interface_id);
             neighbor.other_addr = None;
             neighbor.last_hello_received = SimTime::default();
             println!("\tupdated neighbor entry to = {:?}", self.neighbor_table[if_id]);

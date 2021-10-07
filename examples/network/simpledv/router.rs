@@ -107,8 +107,6 @@ impl Component for Router {
                 self.layer2.bring_up_interfaces(&mut self.layer3);
             }
             InternalEvent::L3TimerEvent(l3_timer) => {
-                // println! {"[time {}ms] timeout at component {:?}",
-                //           sim_time().as_millis(), self.sim_id()};
                 self.layer3.on_timeout(l3_timer)
             }
             InternalEvent::InterfaceEvent(event) => {
