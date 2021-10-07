@@ -49,6 +49,8 @@ impl std::fmt::Debug for ChannelId {
 
 // ComponentId ---------------------------------------------------
 
+pub const DUMMY_COMPONENT: ComponentId = ComponentId { id: usize::MAX, _marker: PhantomData };
+
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub struct ComponentId {
     id: usize,
@@ -60,8 +62,7 @@ impl ComponentId {
         self.id
     }
 
-    // TODO: FROM index
-    pub fn new(id: usize) -> Self {
+    pub(crate) fn new(id: usize) -> Self {
         ComponentId {
             id,
             _marker: PhantomData,

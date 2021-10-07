@@ -38,17 +38,17 @@ impl NeighborTableEntry {
         }
     }
 
-    pub fn up(&mut self) {
-        self.is_up = true;
+    pub fn is_up(&self) -> bool{
+        self.is_up
     }
 
-    pub fn get_interface_id(&self) -> InterfaceId {
-        self.interface_id
-    }
+    // pub fn get_interface_id(&self) -> InterfaceId {
+    //     self.interface_id
+    // }
 
-    pub fn get_my_addr(&self) -> InterfaceAddress {
-        self.my_addr
-    }
+    // pub fn get_my_addr(&self) -> InterfaceAddress {
+    //     self.my_addr
+    // }
 
     pub fn is_simpledv_interface(&self) -> bool {
         self.interface_type == InterfaceType::SimpleDV
@@ -56,6 +56,22 @@ impl NeighborTableEntry {
 
     pub fn is_active_simpledv_interface(&self) -> bool {
         self.interface_type == InterfaceType::SimpleDV && self.other_addr.is_some() && self.is_up
+    }
+
+    /// marks this interface as down
+    ///
+    /// interface is_up is set to false,
+    /// data, accociated with the neighbor (if any) is reset (other_addr and last_hello_received)
+    /// returns true if an EIGRP neigbor was known on this interface
+    pub fn set_interface_down(&mut self) -> bool {
+        self.is_up = false;
+        if self.other_addr.is_some() {
+            self.other_addr = None;
+            self.last_hello_received = SimTime::default();
+            return true;
+        }
+
+        false
     }
 }
 
@@ -116,7 +132,7 @@ impl NeighborTable {
 impl fmt::Display for NeighborTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "\tNeighbor Table:\n")?;
-        write!(f, "\t\t\t\t\ttype \t is_up \t my_addr \t\t other_addr \tlast hello\n")?;
+        write!(f, "\t\t\t\t\ttype \t is_up \t my_addr \t\t other neighbor \t\t other_addr \tlast hello\n")?;
         for entry in &self.table {
             write!(f, "\t\t{:?} => ", entry.interface_id)?;
             write!(f, "\t{:?}", entry.interface_type)?;
@@ -124,6 +140,7 @@ impl fmt::Display for NeighborTable {
             write!(f, "\t{:?}", entry.my_addr)?;
             match entry.other_addr {
                 Some(addr) => {
+                    write!(f, "\tR{}", addr.router_id)?;
                     write!(f, "\t{:?}", addr)?;
                     write!(f, "\t{}ms", entry.last_hello_received.as_millis())?;
                 }

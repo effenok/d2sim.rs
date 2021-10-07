@@ -67,6 +67,17 @@ impl ControlPlane for SimpleDiv {
         }
     }
 
+    fn on_interface_down(&mut self, interface_id: InterfaceId) {
+        println!("[time {}ms][router {}] interface {:?} is down", sim_time().as_millis(), self.router_id, interface_id);
+        let entry = &mut self.neighbor_table[interface_id];
+
+        if entry.is_simpledv_interface() {
+            self.on_simpledv_interface_down(interface_id);
+        } else {
+            todo!()
+        }
+    }
+
     fn receive_packet(&mut self, if_id: InterfaceId, packet: &Packet) {
         let packet = packet.unwrap_next::<SimpleDVPacket>().unwrap();
         println!("[time {}ms][router {}] received packet {:?}", sim_time().as_millis(), self.router_id, packet);
@@ -95,13 +106,15 @@ impl ControlPlane for SimpleDiv {
     }
 
     fn terminate(&mut self) {
+        if self.neighbor_table.len() == 0 {return;}
+
         println!("[router {}] terminating", self.router_id);
         println!("{}", self.neighbor_table);
         println!("{}", self.routing_table);
 
-        if self.router_id.0 == 1 {
-            eprintln!("self.neighbor_table = {:?}", self.neighbor_table);
-        }
+        // if self.router_id.0 == 1 {
+        //     eprintln!("self.neighbor_table = {:?}", self.neighbor_table);
+        // }
     }
 }
 

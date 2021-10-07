@@ -42,10 +42,10 @@ impl RoutingTable {
         let mut entry = RoutingTableEntry {
             distances: vec![Metric::default(); self.num_interfaces],
             preferred_neighbor: if_id,
-            my_distance: metric,
+            my_distance: metric + Metric::ONE_HOP,
         };
 
-        entry.distances[if_id.as_idx()] = metric + Metric::ONE_HOP;
+        entry.distances[if_id.as_idx()] = metric;
 
         let old_entry = self.storage.insert(addr, entry);
 
@@ -75,27 +75,55 @@ impl RoutingTable {
                 Some(nb_metric + Metric::ONE_HOP)
             }
             Some(entry) => {
-                let old_metric = entry.distances[nb_interface.as_idx()];
-
-                if old_metric <= nb_metric {
-                    todo!("increased metric is not implemented");
-                }
+                // let old_metric = entry.distances[nb_interface.as_idx()];
+                //
+                // if old_metric <= nb_metric {
+                //     todo!("increased metric is not implemented");
+                // }
 
                 entry.distances[nb_interface.as_idx()] = nb_metric;
-                // this only works in metric is hop_count
-                // otherwise needs to add interface cost to distances
-                let min_dst = entry.distances.iter().min().unwrap().clone();
-                let my_dst = min_dst + Metric::ONE_HOP;
+                let new_min_distance = RoutingTable::calculate_my_distance(entry);
 
-                if my_dst < entry.my_distance {
-                    entry.my_distance = my_dst;
+                if new_min_distance != entry.my_distance {
+                    entry.my_distance = new_min_distance;
                     entry.preferred_neighbor = nb_interface;
-                    return Some(my_dst);
+                    return Some(new_min_distance);
                 } else {
                     return None;
                 }
             }
         }
+    }
+
+    // TODO: return an iterator over changed entries
+    pub fn remove_entries_for_interface(&mut self, nb_interface: InterfaceId) -> Option<(HostAddr, Metric)> {
+        assert!(self.storage.len() <= 1, "having multiple entries is not yet implemented");
+
+        if self.storage.len() == 0 {return None;};
+
+        for (addr, entry) in &mut self.storage {
+            entry.distances[nb_interface.as_idx()] = Metric::INFINITY;
+
+            // entry.distances.iter().min().unwrap().clone();
+            let (min_if_id, new_min) = entry.distances.iter().enumerate().min_by_key(|&(_, item)| item).unwrap();
+
+            // eprintln!("if_id = {:?}", min_if_id);
+            // eprintln!("if_id = {:?}", new_min);
+
+            if min_if_id != entry.preferred_neighbor.as_idx() {
+                entry.preferred_neighbor = InterfaceId::from(min_if_id);
+                entry.my_distance = *new_min + Metric::ONE_HOP;
+                return Some((*addr, entry.my_distance))
+            } else if new_min.is_infinity() {
+                entry.my_distance = Metric::INFINITY;
+                return Some((*addr, Metric::INFINITY))
+            } else {
+                assert_eq!( entry.my_distance , *new_min + Metric::ONE_HOP);
+                return None;
+            }
+        }
+
+        todo!()
     }
 
     pub fn get_item(&self) -> (&HostAddr, Metric) {
@@ -114,6 +142,14 @@ impl RoutingTable {
 
     pub fn len(&self) -> usize {
         self.storage.len()
+    }
+
+    fn calculate_my_distance(entry: &mut RoutingTableEntry) -> Metric {
+        // this only works in metric is hop_count
+        // otherwise needs to add interface cost to distances
+        let min_dst = entry.distances.iter().min().unwrap().clone();
+        let my_dst = min_dst + Metric::ONE_HOP;
+        my_dst
     }
 }
 

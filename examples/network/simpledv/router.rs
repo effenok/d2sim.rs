@@ -5,9 +5,9 @@ use d2simrs::basicnet::{SimBase, SimpleLayer2};
 use d2simrs::basicnet::packet::Packet;
 use d2simrs::basicnet::types::InterfaceId;
 use d2simrs::component::{ChannelLabel, Component, ComponentBuilder};
-use d2simrs::keys::{ChannelId, ComponentId};
+use d2simrs::keys::{ChannelId, ComponentId, DUMMY_COMPONENT};
 use d2simrs::simtime::NO_DELTA;
-use d2simrs::simvars::{sim_sched, sim_time};
+use d2simrs::simvars::{sim_sched};
 use d2simrs::util::uid::UniqueId;
 
 use crate::simpledv::config::HostAddr;
@@ -52,9 +52,16 @@ impl ComponentBuilder for RouterBuilder {
 
 //-------------------------------------------------------------------
 
+#[derive(Debug)]
+pub struct InterfaceEvent {
+    pub(crate) interface: InterfaceId,
+    pub(crate) down: bool,
+}
+
 pub enum InternalEvent {
     RouterStartEvent,
     L3TimerEvent(Box<dyn Any>),
+    InterfaceEvent(InterfaceEvent)
 }
 
 impl InternalEvent {
@@ -83,14 +90,14 @@ impl Component for Router {
 
     fn init(&mut self) {
         println!("initializing router {:?}", self.sim_id());
-        sim_sched().sched_self_event1(NO_DELTA, self.sim_id(),
-                                      InternalEvent::new_router_start());
+        sim_sched().sched_self_event_with_data(NO_DELTA, self.sim_id(),
+                                               InternalEvent::new_router_start());
     }
 
     fn process_event(&mut self, sender: ComponentId, event: Box<dyn Any>) {
         let event = event.downcast::<InternalEvent>().unwrap();
 
-        assert_eq!(sender, self.sim_id());
+        assert!(sender == self.sim_id() || sender == DUMMY_COMPONENT);
 
         match *event {
             InternalEvent::RouterStartEvent => {
@@ -100,23 +107,34 @@ impl Component for Router {
                 self.layer2.bring_up_interfaces(&mut self.layer3);
             }
             InternalEvent::L3TimerEvent(l3_timer) => {
-                println! {"[time {}ms] timeout at component {:?}",
-                          sim_time().as_millis(), self.sim_id()};
+                // println! {"[time {}ms] timeout at component {:?}",
+                //           sim_time().as_millis(), self.sim_id()};
                 self.layer3.on_timeout(l3_timer)
+            }
+            InternalEvent::InterfaceEvent(event) => {
+                eprintln!("event = {:?}", event);
+                self.layer2.bring_down_interface(event.interface);
+                self.layer3.on_interface_down(event.interface);
             }
         }
     }
 
     fn receive_msg(&mut self, incoming_channel: ChannelId, msg: Box<dyn Any>) {
-        let if_id = self.channel_map.get(&incoming_channel).unwrap();
+        let if_id = *self.channel_map.get(&incoming_channel).unwrap();
         let packet = msg.downcast::<Packet>().unwrap();
 
         // 1. send message to layer 2
-        let next_layer = self.layer2.receive_packet(*if_id, &*packet);
+        let next_layer = self.layer2.receive_packet(if_id, &*packet);
+
+        if next_layer.is_none() {
+            // drop packet because interface is down
+            return;
+        }
+
 
         // 2. send message to layer 3
         assert!(matches!(next_layer, Some(L2NextHeader::Layer3)));
-        self.layer3.receive_packet(*if_id, &*packet);
+        self.layer3.receive_packet(if_id, &*packet);
 
         // there are no layers on this device
     }

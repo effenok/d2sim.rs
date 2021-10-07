@@ -8,7 +8,7 @@ use crate::keys::{ChannelId, ComponentId};
 use crate::simtime::{NO_DELTA, SimTime, SimTimeDelta};
 
 #[derive(Debug)]
-pub struct ProcessEvent {
+pub struct ComponentEvent {
     pub sender: ComponentId,
     pub receiver: ComponentId,
     pub event: Box<dyn Any>,
@@ -30,7 +30,7 @@ pub struct MessageRcvEvent {
 
 #[derive(Debug)]
 pub enum EventType {
-    ProcessEvent(ProcessEvent),
+    ProcessEvent(ComponentEvent),
     MsgSendEvent(MessageSendEvent),
     MsgRcvEvent(MessageRcvEvent),
     EndSimulation,
@@ -154,31 +154,23 @@ impl Scheduler
         self.push_event(event);
     }
 
-    pub fn sched_self_event(&mut self, timedelta: SimTimeDelta, process: ComponentId) {
-        let time = self.curr_time + timedelta;
-        let event = ScheduledEvent {
-            time,
-            index: self.next_event,
-            event: EventType::ProcessEvent(
-                ProcessEvent {
-                    sender: process,
-                    receiver: process,
-                    event: Box::new(()),
-                }
-            ),
-        };
-        self.push_event(event);
+    pub fn sched_self_event(&mut self, timedelta: SimTimeDelta, component: ComponentId) {
+        self.sched_component_event(timedelta, component,  component,Box::new(()));
     }
 
-    pub fn sched_self_event1(&mut self, timedelta: SimTimeDelta, process: ComponentId, event: Box<dyn Any>) {
+    pub fn sched_self_event_with_data(&mut self, timedelta: SimTimeDelta, component: ComponentId, event: Box<dyn Any>) {
+        self.sched_component_event(timedelta, component,  component,event);
+    }
+
+    pub fn sched_component_event(&mut self, timedelta: SimTimeDelta, sender: ComponentId, receiver: ComponentId, event: Box<dyn Any>) {
         let time = self.curr_time + timedelta;
         let event = ScheduledEvent {
             time,
             index: self.next_event,
             event: EventType::ProcessEvent(
-                ProcessEvent {
-                    sender: process,
-                    receiver: process,
+                ComponentEvent {
+                    sender: sender,
+                    receiver: receiver,
                     event: event,
                 }
             ),
@@ -248,7 +240,7 @@ mod test {
             time,
             index: ev_idx,
             event: EventType::ProcessEvent(
-                ProcessEvent {
+                ComponentEvent {
                     sender: process,
                     receiver: process,
                     event: Box::new(ev_value),

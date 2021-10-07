@@ -13,7 +13,6 @@ pub enum SimpleDVPacketType {
     Update(Route),
 }
 
-#[derive(Debug)]
 pub struct SimpleDVPacket {
     pub source: InterfaceAddress,
     pub destination: SimpleAddress,
@@ -37,6 +36,28 @@ impl SimpleDVPacket {
                 addr: adv_addr.clone(),
                 metric,
             }),
+        }
+    }
+}
+
+use std::fmt;
+
+impl fmt::Debug for SimpleDVPacket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.content {
+            SimpleDVPacketType::Hello => {
+                f.debug_struct("Hello")
+                    .field("src", &self.source)
+                    .finish()
+            },
+            SimpleDVPacketType::Update(route) => {
+                f.debug_struct("Update")
+                    .field("from", &self.source)
+                    .field("to", &self.destination)
+                    .field("route-dst", &route.addr)
+                    .field("route-metric", &route.metric)
+                    .finish()
+            }
         }
     }
 }

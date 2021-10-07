@@ -51,6 +51,10 @@ impl<CP: 'static, Layer2T: 'static> DummyLayer3<CP, Layer2T>
         self.control_plane.start();
     }
 
+    pub fn on_interface_down(&mut self, interface: InterfaceId) {
+        self.control_plane.on_interface_down(interface);
+    }
+
     pub fn receive_packet(&mut self, if_id: InterfaceId, packet: &Packet) {
         self.control_plane.receive_packet(if_id, packet);
     }

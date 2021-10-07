@@ -13,6 +13,7 @@ use crate::simpledv::timer::{HelloTimer, NeighborHoldTimer};
 const DO_PERIODIC_HELLOS: bool = false;
 
 impl SimpleDiv {
+
     pub fn add_interface(&mut self, interface_id: InterfaceId) {
         let interface_type = if self.config.has_interface(interface_id)
         { InterfaceType::EndSystem } else { InterfaceType::SimpleDV };
@@ -36,6 +37,16 @@ impl SimpleDiv {
             let hello_timer = InternalEvent::new_hello_timer(if_id);
             self.sim.timer(HELLO_INTERVAL, hello_timer);
         }
+    }
+
+    pub(super) fn on_simpledv_interface_down(&mut self, interface_id: InterfaceId) {
+        let entry = &mut self.neighbor_table[interface_id];
+        let had_simpledv_neighbor = entry.set_interface_down();
+
+        if had_simpledv_neighbor {
+            self.on_neighbor_down(interface_id);
+        }
+
     }
 
     pub(super) fn receive_hello(&mut self, if_id: InterfaceId, neighbor_addr: InterfaceAddress) {
@@ -85,6 +96,11 @@ impl SimpleDiv {
         println!("\t hello timer for interface {:?}", if_id);
         let neighbor = &mut self.neighbor_table[if_id];
 
+        if !neighbor.is_up() {
+            println!("\t stopping hello, interface is down {:?}", if_id);
+            return;
+        }
+
         let hello = Box::new(SimpleDVPacket::new_hello(&neighbor.my_addr));
         self.wrap_and_send_packet(if_id, hello);
 
@@ -114,7 +130,7 @@ impl SimpleDiv {
             neighbor.other_addr = None;
             neighbor.last_hello_received = SimTime::default();
             println!("\tupdated neighbor entry to = {:?}", self.neighbor_table[if_id]);
-            //todo!("react to neighbor down");
+            self.on_neighbor_down(timer.interface_id);
         }
     }
 }

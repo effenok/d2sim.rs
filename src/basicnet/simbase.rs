@@ -22,7 +22,7 @@ impl SimBase {
     }
 
     pub fn timer(&self, timeout: SimTimeDelta, timer: Box<dyn Any>) {
-        sim_sched().sched_self_event1(timeout, self.sim_id, timer);
+        sim_sched().sched_self_event_with_data(timeout, self.sim_id, timer);
     }
 
     pub fn stop_simulation(&self) {

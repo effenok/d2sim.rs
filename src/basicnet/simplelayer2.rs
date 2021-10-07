@@ -41,6 +41,7 @@ impl<NextHeaderT> BottomLayer for SimpleLayer2<NextHeaderT>
 
         let if_ = &self.interfaces[if_id.as_idx()];
         if !if_.is_up {
+            assert!(false); // router should not send packets on interface that is not up
             // ignore packet
             return;
         }
@@ -90,6 +91,16 @@ impl<NextHeaderT> SimpleLayer2<NextHeaderT>
             if_.set_up();
             layer3.on_interface_up(if_.interface_id);
         }
+    }
+
+    pub fn bring_down_interface(&mut self, if_id: InterfaceId) {
+        let mut interface = &mut self.interfaces[if_id.as_idx()];
+        assert!(interface.is_up);
+        interface.is_up = false;
+    }
+
+    pub fn is_interface_up(&self, if_id: InterfaceId) -> bool {
+        self.interfaces[if_id.as_idx()].is_up
     }
 
     pub fn receive_packet(&mut self, if_id: InterfaceId, packet: &Packet) -> Option<NextHeaderT> {
