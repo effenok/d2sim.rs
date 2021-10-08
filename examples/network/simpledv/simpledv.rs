@@ -22,8 +22,8 @@ mod neighbordiscovery;
 mod neighbortable;
 pub mod config;
 mod routingtable;
-mod metric;
-mod routedissemination;
+pub mod metric;
+pub(crate) mod routedissemination;
 
 pub(super) const DEBUG_PERIODIC_HELLOS: bool = false;
 

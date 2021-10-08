@@ -6,14 +6,32 @@ pub use crate::simpledv::addr::HostAddr;
 // however we will skip this for simplicity and run EIGRP on each interface
 // not configured otherwise
 
+#[derive(Debug, Clone)]
 pub struct InterfaceConfig {
     pub if_id: InterfaceId,
     pub advertise_addr: HostAddr,
 }
 
-// TODO: this should be a vector
+#[derive(Debug)]
 pub struct Config {
     interfaces: Vec<InterfaceConfig>,
+}
+
+// NOTE: according to docs Vec::new() does not actually allocate memory
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            interfaces: Vec::new()
+        }
+    }
+}
+
+impl Clone for Config {
+    fn clone(&self) -> Self {
+        // eprintln!("called clone");
+        Config {interfaces: self.interfaces.clone()}
+    }
 }
 
 impl Config {
@@ -23,15 +41,8 @@ impl Config {
         }
     }
 
-    pub fn with_interface(if_id: InterfaceId, addr: HostAddr) {
-        let mut cfg = Config {
-            interfaces: Vec::with_capacity(1)
-        };
-
-        cfg.interfaces.push(InterfaceConfig {
-            if_id,
-            advertise_addr: addr,
-        })
+    pub fn is_empty(&self) -> bool {
+        self.interfaces.len() == 0
     }
 
     pub fn add_interface(&mut self, if_id: InterfaceId, addr: HostAddr) {

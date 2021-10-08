@@ -23,9 +23,9 @@ impl RoutingTable {}
 
 impl RoutingTableEntry {
 
-    pub fn my_distance(&self) -> &Metric {
-        &self.my_distance
-    }
+    // pub fn my_distance(&self) -> &Metric {
+    //     &self.my_distance
+    // }
 }
 
 impl RoutingTable {

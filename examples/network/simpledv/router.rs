@@ -1,34 +1,31 @@
 use std::any::Any;
 use std::collections::HashMap;
 
-use d2simrs::basicnet::{SimBase, SimpleLayer2};
+use d2simrs::basicnet::{RouterId, SimBase, SimpleLayer2};
 use d2simrs::basicnet::packet::Packet;
 use d2simrs::basicnet::types::InterfaceId;
-use d2simrs::component::{ChannelLabel, Component, ComponentBuilder};
+use d2simrs::component::{ChannelLabel, Component};
 use d2simrs::keys::{ChannelId, ComponentId, DUMMY_COMPONENT};
 use d2simrs::simtime::NO_DELTA;
 use d2simrs::simvars::{sim_sched};
-use d2simrs::util::uid::UniqueId;
 
-use crate::simpledv::config::HostAddr;
+use crate::simpledv::config::{Config};
 use crate::types::{L2NextHeader, Layer2, Layer3};
 
 #[derive(Default)]
 pub struct RouterBuilder {
-    counter: usize,
 }
 
-impl ComponentBuilder for RouterBuilder {
-    fn build_component(&mut self, id: ComponentId) -> Box<dyn Component> {
-        self.counter += 1;
+impl RouterBuilder {
+
+    pub fn build_router(&mut self, sim_id: ComponentId, router_id: RouterId, config: &Config) -> Box<dyn Component> {
 
         let mut router = Box::new(Router {
-            sim_helper: SimBase::new(id),
+            sim_helper: SimBase::new(sim_id),
             channel_map: HashMap::new(),
             layer2: SimpleLayer2::new(),
-            layer3: Layer3::new(UniqueId(self.counter)),
+            layer3: Layer3::new(router_id),
         });
-
 
         let ptr = &mut router.layer3 as *mut Layer3;
         let sim = &mut router.sim_helper;
@@ -37,13 +34,8 @@ impl ComponentBuilder for RouterBuilder {
         router.layer3.set_refs(&mut router.layer2, sim);
         router.layer2.set_refs(sim);
 
-        if self.counter == 1 {
-            println!("adding config to router 1");
-            let if_id = InterfaceId::from(0);
-            router.layer3.control_plane.config.add_interface(if_id, HostAddr {
-                router_id: UniqueId(self.counter),
-                interface_id: if_id,
-            })
+        if !config.is_empty() {
+            router.layer3.control_plane.config = config.clone();
         }
 
         router
