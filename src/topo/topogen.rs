@@ -1,11 +1,11 @@
-use crate::topo::topo::{TopoGraph, Topology, TopoNode};
+use crate::topo::topo::{Topology};
 use petgraph::algo::connected_components;
 use rand::{thread_rng, Rng};
-use crate::topo::topo::Point;
+use crate::topo::topodecl::{Point, TopoGraph, TopoNode};
 
 pub trait EdgesGenerator {
     fn estimated_edges_count(&mut self) -> usize;
-    fn generate_edges(&mut self, g: &mut TopoGraph);
+    fn generate_edges(&mut self, g: &mut TopoGraph<(),()>);
 }
 
 pub struct TopologyGenerator<EdgesGeneratorT>
@@ -51,23 +51,23 @@ impl<EdgesGeneratorT: EdgesGenerator>  TopologyGenerator<EdgesGeneratorT> {
 
     //---------------------------------------------------------------------------------
 
-    fn generate_nodes(&mut self, g: &mut TopoGraph) {
+    fn generate_nodes(&mut self, g: &mut TopoGraph<(), ()>) {
         let mut rng = thread_rng();
-        
+
         for _ in 0..self.num_nodes {
             let x = rng.gen();
             let y = rng.gen();
-            g.add_node(TopoNode{component_id: None, point: Point {x, y} });
+            g.add_node(TopoNode{component_id: None, position: Point {x, y}, data: () });
         }
     }
 
-    fn set_edge_weight(&mut self, g: &mut TopoGraph) {
+    fn set_edge_weight(&mut self, g: &mut TopoGraph<(), ()>) {
         for idx in  g.edge_indices() {
             let (a, b) = g.edge_endpoints(idx).unwrap();
-            let p_a = &g[a].point;
-            let p_b = &g[b].point;
+            let p_a = &g[a].position;
+            let p_b = &g[b].position;
             let d = ((p_a.x - p_b.x).powi(2) + (p_a.y - p_b.y).powi(2)).sqrt();
-            g[idx].weight = d;
+            g[idx].distance = d;
         }
     }
 

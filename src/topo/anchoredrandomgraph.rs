@@ -1,10 +1,11 @@
 // TODO: separate utility if possible?
 // TODO: trait - need check connectivity?
 
-use crate::topo::topo::{TopoGraph, TopoEdge};
 use petgraph::graph::NodeIndex;
 use rand::Rng;
+use crate::topo::topodecl::{TopoEdge, TopoGraph};
 use crate::topo::topogen::EdgesGenerator;
+// use crate::topo::topogen::EdgesGenerator;
 
 pub struct AnchoredRandomGraphGen {
     num_nodes: usize,
@@ -39,13 +40,13 @@ impl EdgesGenerator for AnchoredRandomGraphGen {
         self.num_edges
     }
 
-    fn generate_edges(&mut self, g: &mut TopoGraph) {
+    fn generate_edges(&mut self, g: &mut TopoGraph<(),()>) {
         let mut rng = rand::thread_rng();
 
         let indices: Vec<NodeIndex> = g.node_indices().collect();
-        
+
         let mut edges_left = self.num_edges;
-        
+
         // add edges to each node until minimum_degree requirement is satisfied
         for head_idx in g.node_indices() {
             while g.edges(head_idx).count() < self.minimum_degree {
