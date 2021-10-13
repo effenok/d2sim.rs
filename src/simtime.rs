@@ -64,4 +64,12 @@ impl SimTime {
     pub fn as_millis(&self) -> u128 {
         return self.time.as_millis()
     }
+
+    pub fn as_secs(&self) -> u64 {
+        return self.time.as_secs()
+    }
+
+    pub fn time(&self) -> Duration {
+        self.time
+    }
 }

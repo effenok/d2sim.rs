@@ -13,7 +13,7 @@ pub struct ChannelId {
 impl Default for ChannelId {
     fn default() -> Self {
         ChannelId {
-            id: std::usize::MAX,
+            id: usize::MAX,
             _marker: PhantomData,
         }
     }

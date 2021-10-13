@@ -1,16 +1,21 @@
-// TODO: public use
-// see https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html
+pub use crate::sim::Simulation;
+pub use crate::channels::delay_channel::*;
+pub use crate::component::*;
+pub use crate::keys::*;
+pub use crate::simtime::*;
+pub use crate::simvars::{sim_sched, sim_env, sim_time};
+
 
 pub mod environment;
-pub mod component;
+mod component;
 pub mod dummycomponent;
-pub mod keys;
+mod keys;
 pub mod scheduler;
 pub mod channel;
-pub mod sim;
+mod sim;
 pub mod util;
 pub mod simtime;
-pub mod channels;
+mod channels;
 
 pub mod simvars;
 
@@ -19,6 +24,7 @@ pub mod synch;
 pub mod topo;
 
 pub mod basicnet;
+pub mod log;
 
 
 

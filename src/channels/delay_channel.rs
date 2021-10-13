@@ -54,12 +54,31 @@ impl ChannelBuilder for DelayChannelBuilder {
 
 impl DelayChannelBuilder {
 
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn with_delay(delay: std::time::Duration) -> Self {
         DelayChannelBuilder { delay: SimTimeDelta::from(delay) }
     }
 
     pub fn delay(&mut self, delay: std::time::Duration) -> &mut Self {
         self.delay =  SimTimeDelta::from(delay);
+        self
+    }
+
+    pub fn delay_sec(&mut self, sec: u64) -> &mut Self {
+        self.delay =  SimTimeDelta::from(std::time::Duration::from_secs(sec));
+        self
+    }
+
+    pub fn delay_millis(&mut self, millis: u64) -> &mut Self {
+        self.delay =  SimTimeDelta::from(std::time::Duration::from_millis(millis));
+        self
+    }
+
+    pub fn delay_micros(&mut self, micros: u64) -> &mut Self {
+        self.delay =  SimTimeDelta::from(std::time::Duration::from_micros(micros));
         self
     }
 }
